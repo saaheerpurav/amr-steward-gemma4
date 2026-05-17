@@ -105,19 +105,20 @@ SAMPLES_S3      = int(os.getenv("SAMPLES_S3",  "32"))
 NUM_GENERATIONS = int(os.getenv("NUM_GENERATIONS", "4"))
 MAX_COMPLETION  = int(os.getenv("MAX_COMPLETION", "256"))
 LEARNING_RATE   = float(os.getenv("LEARNING_RATE", "5e-6"))
+SFT_SAMPLES_PER_LEVEL = int(os.getenv("SFT_SAMPLES_PER_LEVEL", "25"))
 
-SYSTEM_PROMPT = """You are an antimicrobial stewardship AI.
+SYSTEM_PROMPT = """You are an antimicrobial stewardship AI. Complete the prescription JSON for the patient."""
 
-RULES (strictly enforced):
-1. Start your response immediately with INVESTIGATE: or COMMIT: — no preamble, no explanations.
-2. You may use 0-3 INVESTIGATE calls (each costs 1 budget). Format:
-   INVESTIGATE: {"tool": "interpret_resistance", "arg": "<drug>"}
-   INVESTIGATE: {"tool": "check_guideline", "arg": "<syndrome>"}
-   INVESTIGATE: {"tool": "assess_patient_factors"}
-3. End with EXACTLY one COMMIT line and stop:
-   COMMIT: {"drug": "<name>", "dose": "<dose>", "duration": "<days>", "justification": "<brief reason>"}
+# Appended to every prompt so the model MUST generate a drug name first (assistant prefill).
+# This eliminates the cold-start problem: format is forced, GRPO trains on drug choice quality.
+COMPLETION_PREFIX = 'COMMIT: {"drug": "'
 
-Your ENTIRE response must be ≤5 lines. Begin now:"""
+# Context shown in the user message so the model understands the task
+FEW_SHOT_EXAMPLE = """\
+Complete the prescription for this patient. You will be asked to finish:
+COMMIT: {"drug": "[choose best drug]", "dose": "[appropriate dose]", "duration": "[N days]", "justification": "[reason]"}
+---
+PATIENT:"""
 
 _status: dict[str, Any] = {"phase": "starting", "stage": None, "reward": None, "error": None, "last_trl_metrics": None}
 _log_lines: list[str] = []
@@ -281,7 +282,9 @@ def _build_reward_fns():
         import re as _re
         rewards = []
         for c in completions:
-            text = _completion_to_text(c)
+            # Prefill "COMMIT: {\"drug\": \"" is in the prompt, not the completion —
+            # reconstruct the full text so COMMIT: is visible to the reward function.
+            text = COMPLETION_PREFIX + _completion_to_text(c)
             lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
             has_commit = any(_re.search(r"COMMIT\s*:", l, _re.IGNORECASE) for l in lines)
             has_action = any(_re.search(r"(INVESTIGATE|COMMIT)\s*:", l, _re.IGNORECASE) for l in lines)
@@ -310,7 +313,7 @@ def _build_reward_fns():
         levels = list(curriculum_level) if curriculum_level else [1] * len(completions)
         rewards = []
         for comp, payload, lvl in zip(completions, patient_json, levels):
-            try: rewards.append(float(_score_env_prose(_completion_to_text(comp), payload, int(lvl))))
+            try: rewards.append(float(_score_env_prose(COMPLETION_PREFIX + _completion_to_text(comp), payload, int(lvl))))
             except: rewards.append(0.0)
         log(f"  term_rewards={[round(r,4) for r in rewards]}")
         return rewards
@@ -325,7 +328,7 @@ def build_dataset(level: int, num_samples: int, tokenizer=None):
     from env import AMREnvironment
 
     def _render(obs):
-        user_content = obs.patient_text
+        user_content = FEW_SHOT_EXAMPLE + "\n" + obs.patient_text
         if obs.tool_results:
             user_content += "\n\nINVESTIGATION RESULTS:\n" + "\n---\n".join(obs.tool_results)
         if obs.world_model_rankings:
@@ -340,8 +343,8 @@ def build_dataset(level: int, num_samples: int, tokenizer=None):
         if tokenizer is not None:
             return tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True,
-            )
-        return "\n\n".join([f"SYSTEM:\n{SYSTEM_PROMPT}", f"USER:\n{user_content}", "ASSISTANT:"])
+            ) + COMPLETION_PREFIX
+        return "\n\n".join([f"SYSTEM:\n{SYSTEM_PROMPT}", f"USER:\n{user_content}", "ASSISTANT:"]) + COMPLETION_PREFIX
 
     env = AMREnvironment()
     rows = []
@@ -354,6 +357,181 @@ def build_dataset(level: int, num_samples: int, tokenizer=None):
             "case_id": f"level{level}-case{i}",
         })
     return Dataset.from_list(rows)
+
+
+# ── SFT warm-up ───────────────────────────────────────────────────────────────
+
+def build_sft_dataset(num_per_level: int = 25, tokenizer=None):
+    """Build (prompt+completion) demonstrations for SFT warm-up.
+
+    Scores every drug via AMREnvironment to pick the correct answer, then
+    formats it as INVESTIGATE/COMMIT lines so the model learns the output format.
+    """
+    from datasets import Dataset
+    from env import AMREnvironment, AMRAction
+
+    DOSE_TABLE = {
+        "meropenem":               "1g IV q8h",
+        "ceftazidime-avibactam":   "2.5g IV q8h",
+        "colistin":                "150mg IV q12h",
+        "meropenem-vaborbactam":   "4g IV q8h",
+        "ceftriaxone":             "2g IV q24h",
+        "ciprofloxacin":           "400mg IV q12h",
+        "ampicillin-sulbactam":    "3g IV q6h",
+        "piperacillin-tazobactam": "4.5g IV q6h",
+    }
+
+    def _best_drug(patient, level):
+        """Ask the reward function which drug scores highest."""
+        best_drug, best_r = None, -1.0
+        for drug in patient.antibiogram:
+            try:
+                e2 = AMREnvironment()
+                e2.reset(curriculum_level=level, patient=patient)
+                obs = e2.step(AMRAction(
+                    action_type="COMMIT",
+                    prescription={"drug": drug, "dose": "standard",
+                                  "duration": "14 days", "justification": "test"},
+                ))
+                r = obs.reward or 0.0
+                if r > best_r:
+                    best_r, best_drug = r, drug
+            except Exception:
+                pass
+        return best_drug or list(patient.antibiogram.keys())[0]
+
+    def _renal_adjust(drug, dose, crcl):
+        if not crcl or crcl >= 50:
+            return dose
+        if crcl < 30:
+            if drug == "ceftazidime-avibactam": return "0.94g IV q24h"
+            if drug == "meropenem":             return "500mg IV q12h"
+            if drug == "meropenem-vaborbactam": return "2g IV q8h"
+        return dose
+
+    DURATION = {"bacteremia": "14 days", "pneumonia": "7 days", "uti": "7 days"}
+
+    env = AMREnvironment()
+    rows = []
+    for level in [1, 2, 3]:
+        for _ in range(num_per_level):
+            obs = env.reset(curriculum_level=level)
+            patient = env.current_patient
+            drug = _best_drug(patient, level)
+            crcl = getattr(patient, "creatinine_clearance", None)
+            dose = _renal_adjust(drug, DOSE_TABLE.get(drug, "standard dose IV q8h"), crcl)
+            site = getattr(patient, "infection_site", "bacteremia")
+            mic  = patient.antibiogram.get(drug, 1.0)
+            dur  = DURATION.get(site, "14 days")
+
+            # Completion is everything AFTER the COMPLETION_PREFIX that ends the prompt.
+            # prompt ends: ...COMMIT: {"drug": "
+            # completion:  ceftazidime-avibactam", "dose": "2.5g IV q8h", ...}
+            completion = (
+                f'{drug}", "dose": "{dose}", "duration": "{dur}", '
+                f'"justification": "MIC {mic}, guideline-appropriate for {site}"}}'
+            )
+
+            user_content = FEW_SHOT_EXAMPLE + "\n" + obs.patient_text
+            user_content += f"\n\nINVESTIGATION BUDGET REMAINING: {obs.budget_remaining}"
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user",   "content": user_content},
+            ]
+            if tokenizer is not None:
+                prompt_text = tokenizer.apply_chat_template(
+                    messages, tokenize=False, add_generation_prompt=True
+                ) + COMPLETION_PREFIX
+                eos = tokenizer.eos_token or ""
+            else:
+                prompt_text = f"SYSTEM:\n{SYSTEM_PROMPT}\n\nUSER:\n{user_content}\n\nASSISTANT:{COMPLETION_PREFIX}"
+                eos = "\n"
+
+            rows.append({"text": prompt_text + completion + eos})
+
+    log(f"SFT dataset: {len(rows)} demonstrations across levels 1-3")
+    return Dataset.from_list(rows)
+
+
+def train_sft(model, tokenizer):
+    """SFT warm-up: teach the model to produce COMMIT: format before GRPO."""
+    import torch
+    from trl import SFTTrainer, SFTConfig
+
+    log("=== SFT Warm-up: teaching COMMIT: format ===")
+    _status.update({"phase": "training", "stage": "sft_warmup"})
+
+    dataset = build_sft_dataset(num_per_level=SFT_SAMPLES_PER_LEVEL, tokenizer=tokenizer)
+    out_dir  = f"{OUTPUT_DIR}/sft"
+
+    config = SFTConfig(
+        output_dir=out_dir,
+        num_train_epochs=3,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        learning_rate=2e-4,
+        warmup_ratio=0.1,
+        lr_scheduler_type="cosine",
+        bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+        fp16=False,
+        logging_steps=5,
+        save_steps=999999,
+        save_total_limit=1,
+        report_to="none",
+        max_seq_length=768,
+        dataset_text_field="text",
+        packing=False,
+        dataloader_num_workers=0,
+    )
+
+    # Completion-only masking using COMPLETION_PREFIX as the boundary.
+    # The prompt ends with COMPLETION_PREFIX; loss is computed only on what follows.
+    try:
+        from trl import DataCollatorForCompletionOnlyLM
+        resp_tpl_ids = tokenizer.encode(COMPLETION_PREFIX, add_special_tokens=False)
+        collator = DataCollatorForCompletionOnlyLM(resp_tpl_ids, tokenizer=tokenizer)
+        log(f"  SFT: completion-only masking, template={COMPLETION_PREFIX!r} ids={resp_tpl_ids}")
+    except Exception as e:
+        collator = None
+        log(f"  SFT: DataCollatorForCompletionOnlyLM unavailable ({e}), using full-text loss")
+
+    trainer = SFTTrainer(
+        model=model,
+        args=config,
+        train_dataset=dataset,
+        processing_class=tokenizer,
+        data_collator=collator,
+    )
+
+    _orig_log = trainer.log
+    def _patched_log(logs, *a, **kw):
+        numeric = {k: round(v, 5) for k, v in logs.items() if isinstance(v, (int, float))}
+        if numeric:
+            log(f"  SFT: {numeric}")
+        _orig_log(logs, *a, **kw)
+    trainer.log = _patched_log
+
+    _stop_hb = threading.Event()
+    def _hb():
+        n = 0
+        while not _stop_hb.wait(30):
+            n += 1
+            log(f"  [SFT heartbeat #{n}] still training ...")
+    threading.Thread(target=_hb, daemon=True).start()
+
+    log("SFT trainer.train() ...")
+    trainer.train()
+    _stop_hb.set()
+
+    history = trainer.state.log_history
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    (Path(out_dir) / "log_history.json").write_text(json.dumps(history, indent=2))
+
+    sft_steps = [h for h in history if "loss" in h and "train_runtime" not in h]
+    if sft_steps:
+        losses = [h["loss"] for h in sft_steps]
+        log(f"  SFT done | initial_loss={losses[0]:.3f} final_loss={losses[-1]:.3f}")
+    log("SFT warm-up complete — model can now produce COMMIT: tokens.")
 
 
 # ── Training ───────────────────────────────────────────────────────────────────
@@ -392,6 +570,12 @@ def load_model():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
+
+    # Prevent the "INVESTINVESTINVEST" token-repetition loop during GRPO generation
+    if hasattr(model, "generation_config"):
+        model.generation_config.repetition_penalty = 1.3
+        log("Set repetition_penalty=1.3 on generation_config")
+
     model.print_trainable_parameters()
     return model, tokenizer
 
@@ -431,7 +615,7 @@ def train_stage(model, tokenizer, level, num_samples, stage_label, reward_fns):
         report_to="none",
         max_completion_length=MAX_COMPLETION,
         num_generations=NUM_GENERATIONS,
-        temperature=1.2,
+        temperature=0.9,
         log_completions=False,
         use_vllm=False,
         dataloader_num_workers=0,
@@ -500,7 +684,7 @@ def push_model(trainer, tokenizer):
                        repo_id=HF_REPO_ID, repo_type="model")
         log("Uploaded reward_curves.png to model repo.")
 
-    for stage in ["stage1", "stage2", "stage3"]:
+    for stage in ["sft", "stage1", "stage2", "stage3"]:
         stage_dir = Path(f"{OUTPUT_DIR}/{stage}")
         log_file = stage_dir / "log_history.json"
         if log_file.exists():
@@ -516,30 +700,46 @@ def plot_curves():
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
+        fig, axes = plt.subplots(1, 4, figsize=(20, 4))
+        fig.suptitle("AMR-Steward: Gemma 4 Training — SFT Warm-up + GRPO Curriculum",
+                     fontsize=13, fontweight="bold")
+
+        # Panel 0: SFT loss
+        ax = axes[0]
+        sft_path = Path(f"{OUTPUT_DIR}/sft/log_history.json")
+        if sft_path.exists():
+            history = json.loads(sft_path.read_text())
+            steps_data = [h for h in history if "loss" in h and "train_runtime" not in h]
+            if steps_data:
+                steps  = [h["step"] for h in steps_data]
+                losses = [h["loss"] for h in steps_data]
+                ax.plot(steps, losses, color="#9C27B0", linewidth=2)
+                ax.fill_between(steps, losses, alpha=0.1, color="#9C27B0")
+        ax.set_title("SFT Warm-up\n(Cross-entropy loss)", fontsize=10)
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Loss")
+        ax.grid(True, alpha=0.3)
+
+        # Panels 1-3: GRPO reward per stage
         stage_labels = ["stage1", "stage2", "stage3"]
-        stage_names  = ["Stage 1 — Susceptible", "Stage 2 — Resistant/MDR",
-                        "Stage 3 — MDR + Renal + Allergies"]
-        colors = ["#2196F3", "#FF9800", "#F44336"]
-
-        fig, axes = plt.subplots(1, 3, figsize=(15, 4), sharey=True)
-        fig.suptitle("AMR-Steward: Gemma 4 GRPO Reward Across Curriculum Stages", fontsize=14, fontweight="bold")
-
-        for ax, label, name, color in zip(axes, stage_labels, stage_names, colors):
+        stage_names  = ["Stage 1\nSusceptible", "Stage 2\nResistant/MDR", "Stage 3\nMDR+Renal"]
+        colors       = ["#2196F3", "#FF9800", "#F44336"]
+        for ax, label, name, color in zip(axes[1:], stage_labels, stage_names, colors):
             hist_path = Path(f"{OUTPUT_DIR}/{label}/log_history.json")
-            if not hist_path.exists():
-                ax.set_title(name); continue
-            history = json.loads(hist_path.read_text())
-            train_steps = [h for h in history if "reward" in h and "train_runtime" not in h]
-            if train_steps:
-                steps = [h["step"] for h in train_steps]
-                rewards = [h["reward"] for h in train_steps]
-                ax.plot(steps, rewards, marker="o", color=color, linewidth=2, markersize=6)
-                ax.fill_between(steps, rewards, alpha=0.1, color=color)
-                ax.axhline(max(rewards), color=color, linestyle="--", alpha=0.4, label=f"Peak {max(rewards):.3f}")
-                ax.legend(fontsize=9)
-            ax.set_title(name, fontsize=11)
-            ax.set_xlabel("Training Step")
-            ax.set_ylabel("Mean Reward" if ax == axes[0] else "")
+            if hist_path.exists():
+                history = json.loads(hist_path.read_text())
+                train_steps = [h for h in history if "reward" in h and "train_runtime" not in h]
+                if train_steps:
+                    steps   = [h["step"] for h in train_steps]
+                    rewards = [h["reward"] for h in train_steps]
+                    ax.plot(steps, rewards, color=color, linewidth=2)
+                    ax.fill_between(steps, rewards, alpha=0.1, color=color)
+                    ax.axhline(max(rewards), color=color, linestyle="--", alpha=0.4,
+                               label=f"Peak {max(rewards):.3f}")
+                    ax.legend(fontsize=9)
+            ax.set_title(f"GRPO {name}", fontsize=10)
+            ax.set_xlabel("Step")
+            ax.set_ylabel("Mean Reward")
             ax.set_ylim(0, 1.0)
             ax.grid(True, alpha=0.3)
 
@@ -558,6 +758,7 @@ def train_main():
         clone_repo()
 
         model, tokenizer = load_model()
+        train_sft(model, tokenizer)
         fmt_fn, proc_fn, term_fn = _build_reward_fns()
 
         trainer = None
