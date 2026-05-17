@@ -107,18 +107,12 @@ MAX_COMPLETION  = int(os.getenv("MAX_COMPLETION", "256"))
 LEARNING_RATE   = float(os.getenv("LEARNING_RATE", "5e-6"))
 SFT_SAMPLES_PER_LEVEL = int(os.getenv("SFT_SAMPLES_PER_LEVEL", "25"))
 
-SYSTEM_PROMPT = """You are an antimicrobial stewardship AI. Complete the prescription JSON for the patient."""
+SYSTEM_PROMPT = "You are an antimicrobial stewardship AI. Select the best antibiotic for the patient."
 
-# Appended to every prompt so the model MUST generate a drug name first (assistant prefill).
-# This eliminates the cold-start problem: format is forced, GRPO trains on drug choice quality.
+# Prefill forces the model to output a drug name as the first tokens.
+# NO "INVESTIGATE" or "COMMIT" keywords appear anywhere in the prompts —
+# those words were causing the model to loop on the "INVEST" subword token.
 COMPLETION_PREFIX = 'COMMIT: {"drug": "'
-
-# Context shown in the user message so the model understands the task
-FEW_SHOT_EXAMPLE = """\
-Complete the prescription for this patient. You will be asked to finish:
-COMMIT: {"drug": "[choose best drug]", "dose": "[appropriate dose]", "duration": "[N days]", "justification": "[reason]"}
----
-PATIENT:"""
 
 _status: dict[str, Any] = {"phase": "starting", "stage": None, "reward": None, "error": None, "last_trl_metrics": None}
 _log_lines: list[str] = []
@@ -328,23 +322,33 @@ def build_dataset(level: int, num_samples: int, tokenizer=None):
     from env import AMREnvironment
 
     def _render(obs):
-        user_content = FEW_SHOT_EXAMPLE + "\n" + obs.patient_text
-        if obs.tool_results:
-            user_content += "\n\nINVESTIGATION RESULTS:\n" + "\n---\n".join(obs.tool_results)
-        if obs.world_model_rankings:
-            user_content += f"\n\n{obs.world_model_rankings}"
-        user_content += f"\n\nINVESTIGATION BUDGET REMAINING: {obs.budget_remaining}"
-        if obs.budget_remaining == 0:
-            user_content += "\n\nYOU MUST COMMIT NOW."
+        # Build plain drug list from patient antibiogram — no special keywords
+        try:
+            import json as _json
+            patient = env.current_patient
+            drug_lines = "\n".join(
+                f"  {d}: MIC {mic}" for d, mic in patient.antibiogram.items()
+            )
+            renal = f"CrCl {patient.creatinine_clearance} mL/min" if getattr(patient, "creatinine_clearance", None) else ""
+            allergies = ", ".join(patient.allergies) if getattr(patient, "allergies", None) else "none"
+            user_content = (
+                f"{obs.patient_text}\n\n"
+                f"Available drugs:\n{drug_lines}\n\n"
+                f"Renal function: {renal or 'normal'}\n"
+                f"Allergies: {allergies}\n\n"
+                f"Which drug is best for this patient?"
+            )
+        except Exception:
+            user_content = obs.patient_text
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
+            {"role": "user",   "content": user_content},
         ]
         if tokenizer is not None:
             return tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True,
             ) + COMPLETION_PREFIX
-        return "\n\n".join([f"SYSTEM:\n{SYSTEM_PROMPT}", f"USER:\n{user_content}", "ASSISTANT:"]) + COMPLETION_PREFIX
+        return f"SYSTEM:\n{SYSTEM_PROMPT}\n\nUSER:\n{user_content}\n\nASSISTANT:{COMPLETION_PREFIX}"
 
     env = AMREnvironment()
     rows = []
@@ -571,11 +575,6 @@ def load_model():
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
 
-    # Prevent the "INVESTINVESTINVEST" token-repetition loop during GRPO generation
-    if hasattr(model, "generation_config"):
-        model.generation_config.repetition_penalty = 1.3
-        log("Set repetition_penalty=1.3 on generation_config")
-
     model.print_trainable_parameters()
     return model, tokenizer
 
@@ -758,7 +757,6 @@ def train_main():
         clone_repo()
 
         model, tokenizer = load_model()
-        train_sft(model, tokenizer)
         fmt_fn, proc_fn, term_fn = _build_reward_fns()
 
         trainer = None
