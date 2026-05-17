@@ -103,20 +103,21 @@ SAMPLES_S1      = int(os.getenv("SAMPLES_S1", "128"))
 SAMPLES_S2      = int(os.getenv("SAMPLES_S2",  "64"))
 SAMPLES_S3      = int(os.getenv("SAMPLES_S3",  "32"))
 NUM_GENERATIONS = int(os.getenv("NUM_GENERATIONS", "4"))
-MAX_COMPLETION  = int(os.getenv("MAX_COMPLETION", "512"))
+MAX_COMPLETION  = int(os.getenv("MAX_COMPLETION", "256"))
 LEARNING_RATE   = float(os.getenv("LEARNING_RATE", "5e-6"))
 
-SYSTEM_PROMPT = """You are an antimicrobial stewardship AI. Prescribe the narrowest effective antibiotic.
+SYSTEM_PROMPT = """You are an antimicrobial stewardship AI.
 
-INVESTIGATE tools (optional, costs 1 budget each):
-  INVESTIGATE: {"tool": "interpret_resistance", "arg": "<drug>"}
-  INVESTIGATE: {"tool": "check_guideline", "arg": "<syndrome>"}
-  INVESTIGATE: {"tool": "assess_patient_factors"}
+RULES (strictly enforced):
+1. Start your response immediately with INVESTIGATE: or COMMIT: — no preamble, no explanations.
+2. You may use 0-3 INVESTIGATE calls (each costs 1 budget). Format:
+   INVESTIGATE: {"tool": "interpret_resistance", "arg": "<drug>"}
+   INVESTIGATE: {"tool": "check_guideline", "arg": "<syndrome>"}
+   INVESTIGATE: {"tool": "assess_patient_factors"}
+3. End with EXACTLY one COMMIT line and stop:
+   COMMIT: {"drug": "<name>", "dose": "<dose>", "duration": "<days>", "justification": "<brief reason>"}
 
-When ready, output EXACTLY this one line and stop:
-  COMMIT: {"drug": "<name>", "dose": "<dose>", "duration": "<days>", "justification": "<one sentence>"}
-
-Do not add any text before or after the COMMIT line."""
+Your ENTIRE response must be ≤5 lines. Begin now:"""
 
 _status: dict[str, Any] = {"phase": "starting", "stage": None, "reward": None, "error": None, "last_trl_metrics": None}
 _log_lines: list[str] = []
@@ -246,8 +247,51 @@ def _build_reward_fns():
                 except: pass
         return cum
 
+    def _score_env_prose(text, patient_payload, level):
+        """Prose fallback: scan free text for any drug name from the patient's antibiogram.
+        Returns 0.25× the formal reward so COMMIT: format is still strongly preferred."""
+        formal = _score_env(text, patient_payload, level)
+        if formal > 0:
+            return formal
+        import re as _re2
+        try:
+            patient = PatientCase(**json.loads(patient_payload))
+            text_lower = text.lower()
+            best = 0.0
+            for drug in patient.antibiogram:
+                # Match drug name with flexible separators (ceftazidime-avibactam → ceftazidime avibactam)
+                pattern = drug.lower().replace("-", r"[-\s]?")
+                if _re2.search(pattern, text_lower):
+                    try:
+                        env2 = AMREnvironment()
+                        env2.reset(curriculum_level=int(level), patient=patient)
+                        obs = env2.step(AMRAction(
+                            action_type="COMMIT",
+                            prescription={"drug": drug, "dose": "standard", "duration": "14 days", "justification": ""}
+                        ))
+                        if obs.reward:
+                            best = max(best, float(obs.reward))
+                    except Exception:
+                        pass
+            return best * 0.25
+        except Exception:
+            return 0.0
+
     def fmt_fn(prompts, completions, **kw):
-        return [float(R6_format(_completion_to_text(c))) * 0.05 for c in completions]
+        import re as _re
+        rewards = []
+        for c in completions:
+            text = _completion_to_text(c)
+            lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+            has_commit = any(_re.search(r"COMMIT\s*:", l, _re.IGNORECASE) for l in lines)
+            has_action = any(_re.search(r"(INVESTIGATE|COMMIT)\s*:", l, _re.IGNORECASE) for l in lines)
+            if not has_commit:
+                rewards.append(0.02 if has_action else 0.0)
+            else:
+                r6 = float(R6_format(text))
+                rewards.append(0.05 + r6 * 0.10)
+        log(f"  fmt_rewards={[round(r,4) for r in rewards]} sample={_completion_to_text(completions[0])[:80]!r}")
+        return rewards
 
     def proc_fn(prompts, completions, patient_json, curriculum_level=None, **kw):
         levels = list(curriculum_level) if curriculum_level else [1] * len(completions)
@@ -266,8 +310,9 @@ def _build_reward_fns():
         levels = list(curriculum_level) if curriculum_level else [1] * len(completions)
         rewards = []
         for comp, payload, lvl in zip(completions, patient_json, levels):
-            try: rewards.append(float(_score_env(_completion_to_text(comp), payload, int(lvl))))
+            try: rewards.append(float(_score_env_prose(_completion_to_text(comp), payload, int(lvl))))
             except: rewards.append(0.0)
+        log(f"  term_rewards={[round(r,4) for r in rewards]}")
         return rewards
 
     return fmt_fn, proc_fn, term_fn
@@ -386,7 +431,7 @@ def train_stage(model, tokenizer, level, num_samples, stage_label, reward_fns):
         report_to="none",
         max_completion_length=MAX_COMPLETION,
         num_generations=NUM_GENERATIONS,
-        temperature=0.7,
+        temperature=1.2,
         log_completions=False,
         use_vllm=False,
         dataloader_num_workers=0,
@@ -564,6 +609,6 @@ if __name__ == "__main__":
         _auto_pause_space()
     else:
         # Error path: keep space alive so monitor can read the error before pausing
-        log("Training failed — keeping space alive 300s for error inspection ...")
-        time.sleep(300)
+        log("Training failed — keeping space alive 900s for error inspection ...")
+        time.sleep(900)
         _auto_pause_space()
