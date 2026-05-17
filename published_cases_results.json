@@ -1,0 +1,119 @@
+[
+  {
+    "case_id": "case_1_CRE_bacteremia",
+    "description": "67M post-renal-transplant, CRE K. pneumoniae bacteremia.\nMeropenem MIC=8 (Resistant), ceftazidime-avibactam MIC=1 (Susceptible).\nCrCl 40 mL/min (moderate impairment). No allergies.",
+    "citation": "Tamma PD et al. IDSA 2022 Guidance on AMR Gram-Negative Infections. Clin Infect Dis. 2023;76(7):1228-1270. PMC9890506.",
+    "published_recommendation": "Ceftazidime-avibactam (IDSA preferred for KPC-CRE bacteremia, renal-adjusted)",
+    "prescribed_drug": "ceftazidime-avibactam",
+    "dose": "1.25g IV q8h",
+    "reward_breakdown": {
+      "R0_allergy": 1.0,
+      "R1_activity": 1.0,
+      "R2_guideline": 1.0,
+      "R3_stewardship": 1.0,
+      "R4_dose": 1.0,
+      "R5_efficiency": 0.25,
+      "quality_ratio": 1.0,
+      "total": 0.925
+    },
+    "quality_ratio": 1.0,
+    "guideline_match": true,
+    "microbiologic_match": true,
+    "overall_match": true,
+    "tool_results_log": [
+      {
+        "tool": "interpret_resistance",
+        "arg": "meropenem",
+        "result": "Meropenem MIC = 8.0 mg/L -> EUCAST classification: Resistant (organism: K. pneumoniae)."
+      },
+      {
+        "tool": "check_guideline",
+        "arg": "bacteremia",
+        "result": "IDSA recommendation for K. pneumoniae (ESBL) + bacteremia:\n  First-line: ertapenem - 1g IV q24h for 14 days.\n  Alternatives: meropenem.\n  Notes: ESBL-producing organism. Carbapenems are drug of choice.."
+      },
+      {
+        "tool": "assess_patient_factors",
+        "arg": "",
+        "result": "Renal function: CrCl 40.0 mL/min (moderate impairment).\nAllergies reported: none.\nRenal dosing alerts for drugs in this antibiogram:\n  - meropenem: 1g IV q12h\n  - ceftazidime-avibactam: 1.25g IV q8h\n  - colistin: reduce maintenance dose\n  - meropenem-vaborbactam: 2g IV q8h"
+      }
+    ]
+  },
+  {
+    "case_id": "case_2_MSSA_PCN_allergy",
+    "description": "58M, MSSA bacteremia.\nOxacillin MIC=0.25 (Susceptible), cefazolin MIC=1 (Susceptible).\nCrCl 65 mL/min. No allergies.",
+    "citation": "Maraolo AE et al. Influence of Reported Penicillin Allergy on Mortality in MSSA Bacteremia. Open Forum Infect Dis. 2018;5(3):ofy042. doi:10.1093/ofid/ofy042.",
+    "published_recommendation": "Cefazolin (preferred beta-lactam for penicillin-allergic patients with MSSA bacteremia; non-inferior to nafcillin in outcomes)",
+    "prescribed_drug": "cefazolin",
+    "dose": "2g IV q8h",
+    "reward_breakdown": {
+      "R0_allergy": 1.0,
+      "R1_activity": 1.0,
+      "R2_guideline": 1.0,
+      "R3_stewardship": 1.0,
+      "R4_dose": 1.0,
+      "R5_efficiency": 0.25,
+      "quality_ratio": 1.0,
+      "total": 0.925
+    },
+    "quality_ratio": 1.0,
+    "guideline_match": true,
+    "microbiologic_match": true,
+    "overall_match": true,
+    "tool_results_log": [
+      {
+        "tool": "interpret_resistance",
+        "arg": "oxacillin",
+        "result": "Oxacillin MIC = 0.25 mg/L -> EUCAST classification: Susceptible (organism: S. aureus)."
+      },
+      {
+        "tool": "assess_patient_factors",
+        "arg": "",
+        "result": "Renal function: CrCl 65.0 mL/min (normal / mild impairment).\nAllergies reported: none.\nRenal dosing alerts for drugs in this antibiogram:\n  - oxacillin: 2g IV q4h\n  - cefazolin: 2g IV q8h\n  - vancomycin: 15-20mg/kg IV q8-12h\n  - daptomycin: 6mg/kg IV q24h"
+      },
+      {
+        "tool": "check_guideline",
+        "arg": "bacteremia",
+        "result": "IDSA recommendation for S. aureus (MSSA) + bacteremia:\n  First-line: cefazolin - 2g IV q8h for 14-42 days depending on source and complications.\n  Alternatives: nafcillin, oxacillin.\n  Notes: MSSA bacteremia should receive an anti-staphylococcal beta-lactam when tolerated.."
+      }
+    ]
+  },
+  {
+    "case_id": "case_3_VRE_hemodialysis",
+    "description": "72F on hemodialysis (CrCl 8 mL/min), VRE E. faecium bloodstream infection.\nVancomycin MIC=32 (Resistant), daptomycin MIC=1 (Susceptible), linezolid MIC=2 (Susceptible).\nNo allergies.",
+    "citation": "Britt NS et al. Comparison of Effectiveness and Safety of Linezolid and Daptomycin in VRE Bloodstream Infection. Clin Infect Dis. 2015;61(6):871-878. PMC4551011.",
+    "published_recommendation": "High-dose daptomycin (\u22658 mg/kg, renal-adjusted, post-HD dosing); superior microbiologic clearance vs linezolid in VRE BSI",
+    "prescribed_drug": "daptomycin",
+    "dose": "8mg/kg IV post-HD",
+    "reward_breakdown": {
+      "R0_allergy": 1.0,
+      "R1_activity": 1.0,
+      "R2_guideline": 0.5,
+      "R3_stewardship": 1.0,
+      "R4_dose": 1.0,
+      "R5_efficiency": 0.25,
+      "quality_ratio": 0.9393939393939394,
+      "total": 0.8705
+    },
+    "quality_ratio": 0.9393939393939394,
+    "guideline_match": false,
+    "microbiologic_match": true,
+    "overall_match": false,
+    "tool_results_log": [
+      {
+        "tool": "interpret_resistance",
+        "arg": "vancomycin",
+        "result": "Vancomycin MIC = 32.0 mg/L -> EUCAST classification: Resistant (organism: Enterococcus)."
+      },
+      {
+        "tool": "assess_patient_factors",
+        "arg": "",
+        "result": "Renal function: CrCl 8.0 mL/min (kidney failure / dialysis-range).\nAllergies reported: none.\nRenal dosing alerts for drugs in this antibiogram:\n  - vancomycin: 15-20mg/kg IV q48-72h\n  - daptomycin: 8mg/kg IV post-HD\n  - linezolid: 600mg IV/PO q12h\n  - ampicillin: 2g IV q12-24h"
+      },
+      {
+        "tool": "check_guideline",
+        "arg": "bacteremia",
+        "result": "IDSA recommendation for Enterococcus (VRE) + bacteremia:\n  First-line: linezolid - 600mg IV/PO q12h for 7-14 days.\n  Alternatives: daptomycin.\n  Notes: Vancomycin-resistant Enterococcus. Use linezolid or daptomycin based on syndrome and susceptibility.."
+      }
+    ]
+  }
+]

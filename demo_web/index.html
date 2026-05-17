@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMR-Steward — Can AI save lives?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060a14;--bg2:#0c1220;--bg3:#111827;
+  --border:rgba(255,255,255,0.07);
+  --text:#dce8f5;--dim:rgba(220,232,245,0.38);
+  --teal:#00d4aa;--tealg:rgba(0,212,170,0.15);
+  --red:#ff4455;--redg:rgba(255,68,85,0.15);
+  --amber:#f5a623;--amberg:rgba(245,166,35,0.12);
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 4px)}
+
+/* ── ACTS ── */
+.act{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:clamp(1.5rem,4vw,3rem);
+  opacity:0;pointer-events:none;transition:opacity .38s ease,transform .38s ease;transform:translateY(12px)}
+.act.active{opacity:1;pointer-events:all;transform:translateY(0)}
+.act.out{opacity:0;transform:translateY(-12px);pointer-events:none}
+/* horizontal slide for score→comparison transition */
+.act.slide-left{transform:translateX(-60px)}
+.act.slide-from-right{transform:translateX(60px)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.8rem 1.8rem;
+  border:1.5px solid var(--teal);background:transparent;color:var(--teal);
+  font-family:var(--mono);font-size:.78rem;font-weight:500;letter-spacing:.08em;
+  text-transform:uppercase;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn:hover{background:var(--tealg);box-shadow:0 0 28px rgba(0,212,170,.2)}
+.btn.red{border-color:var(--red);color:var(--red)}
+.btn.red:hover{background:var(--redg);box-shadow:0 0 28px rgba(255,68,85,.2)}
+.btn.lg{padding:1rem 2.5rem;font-size:.88rem}
+.btn:disabled{opacity:.22;cursor:not-allowed;pointer-events:none}
+
+/* ═══ ACT 0 ═══ */
+#a0{text-align:center;gap:0}
+#a0>*{opacity:0;transform:translateY(18px)}
+#a0.active>#a0-n{animation:up .65s .1s forwards}
+#a0.active>#a0-s{animation:up .65s .45s forwards}
+#a0.active>#a0-q{animation:up .65s .8s forwards}
+#a0.active>#a0-b{animation:up .65s 1.1s forwards}
+@keyframes up{to{opacity:1;transform:translateY(0)}}
+.bignumber{font-family:var(--mono);font-size:clamp(4.5rem,12vw,10rem);font-weight:700;
+  line-height:1;letter-spacing:-.04em;color:var(--red);
+  text-shadow:0 0 120px rgba(255,68,85,.32);margin-bottom:.6rem}
+.intro-sub{font-size:clamp(.9rem,2.2vw,1.2rem);color:var(--dim);letter-spacing:.02em;margin-bottom:2rem}
+.intro-q{font-size:clamp(1.1rem,3vw,1.85rem);font-weight:700;max-width:560px;line-height:1.35;margin-bottom:2.8rem}
+
+/* ═══ ACT 1 ═══ */
+#a1{gap:0}
+.ptbadge{position:absolute;top:2rem;left:2.5rem;font-family:var(--mono);font-size:.62rem;
+  color:var(--teal);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:.65rem}
+.ptbadge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--teal);
+  box-shadow:0 0 10px var(--teal);animation:blink 1.6s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.ptfig{margin-bottom:2.8rem;opacity:.72}
+.ptfacts{text-align:center;margin-bottom:2.4rem;display:flex;flex-direction:column;gap:.55rem}
+.ptprimary{font-size:clamp(1.4rem,4.5vw,2.3rem);font-weight:800}
+.ptwarn{font-size:clamp(.95rem,2.8vw,1.35rem);font-weight:600;color:var(--amber)}
+.ptnote{font-size:clamp(.82rem,2vw,1rem);color:var(--dim)}
+.pips{display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem}
+.pip-lbl{font-family:var(--mono);font-size:.6rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:.35rem}
+.pip{width:12px;height:12px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px rgba(0,212,170,.5);transition:all .3s}
+.pip.off{background:transparent;border:1.5px solid rgba(255,255,255,.16);box-shadow:none}
+.ptrule{font-family:var(--mono);font-size:.68rem;color:var(--dim);letter-spacing:.05em;margin-bottom:1.8rem}
+
+/* ═══ ACT 2 ═══ */
+#a2{justify-content:flex-start;padding-top:4.5rem;gap:0}
+#a2 .pips{margin-bottom:2rem}
+.clue-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;width:100%;max-width:860px}
+.clue-card{background:var(--bg2);border:1px solid var(--border);padding:1.8rem 1.5rem;cursor:pointer;
+  transition:border-color .2s,transform .2s;display:flex;flex-direction:column;gap:.8rem;
+  min-height:200px;position:relative;overflow:hidden}
+.clue-card::after{content:'';position:absolute;inset:0;background:var(--tealg);opacity:0;transition:opacity .2s}
+.clue-card:hover:not(.done):not(.busy)::after{opacity:1}
+.clue-card:hover:not(.done):not(.busy){border-color:rgba(0,212,170,.35);transform:translateY(-2px)}
+.clue-card.done{cursor:default;border-color:rgba(0,212,170,.2)}
+.clue-card.busy{cursor:wait;opacity:.6}
+.clue-icon{font-size:1.6rem;position:relative;z-index:1}
+.clue-title{font-size:.88rem;font-weight:600;line-height:1.4;color:var(--text);position:relative;z-index:1}
+.clue-sub{font-family:var(--mono);font-size:.64rem;color:var(--dim);letter-spacing:.03em;position:relative;z-index:1}
+.clue-result{margin-top:auto;font-size:.78rem;line-height:1.55;display:none;position:relative;z-index:1;
+  padding:.6rem .8rem;animation:sli .3s ease forwards}
+@keyframes sli{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.clue-result.bad{color:var(--red);background:rgba(255,68,85,.07);border-left:2px solid var(--red)}
+.clue-result.ok{color:var(--teal);background:rgba(0,212,170,.07);border-left:2px solid var(--teal)}
+.clue-result.info{color:var(--amber);background:rgba(245,166,35,.07);border-left:2px solid var(--amber)}
+.clue-tap{font-family:var(--mono);font-size:.6rem;color:var(--dim);letter-spacing:.06em;
+  text-transform:uppercase;margin-top:auto;position:relative;z-index:1}
+.clue-card.done .clue-tap{display:none}
+.inv-footer{margin-top:1.6rem;display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}
+.inv-hint{font-family:var(--mono);font-size:.64rem;color:var(--dim);letter-spacing:.04em}
+
+/* ═══ ACT 3 ═══ */
+#a3{gap:2rem;text-align:center}
+.rx-label{font-size:clamp(1.1rem,3vw,1.6rem);font-weight:700;color:var(--dim)}
+.rx-label span{color:var(--text)}
+.drug-opts{display:flex;flex-direction:column;gap:.6rem;width:100%;max-width:440px}
+.drug-opt{background:var(--bg2);border:1.5px solid var(--border);padding:.9rem 1.3rem;
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--mono);font-size:.82rem;transition:all .18s;text-align:left}
+.drug-opt:hover{border-color:rgba(0,212,170,.4);background:var(--tealg)}
+.drug-opt.selected{border-color:var(--teal);background:var(--tealg);color:var(--teal)}
+.drug-opt .drug-name{font-weight:700;letter-spacing:.02em}
+.drug-opt .drug-class{font-size:.62rem;color:var(--dim);margin-top:.15rem}
+.rx-row{display:flex;align-items:center;gap:1rem}
+.spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.12);border-top-color:var(--teal);
+  border-radius:50%;animation:spin .65s linear infinite;display:none}
+.spin.on{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rx-err{font-family:var(--mono);font-size:.7rem;color:var(--red);display:none;margin-top:.5rem;max-width:400px;text-align:center}
+
+/* ═══ ACT 4 ═══ */
+#a4{gap:1.4rem;text-align:center}
+.score-ctx{font-family:var(--mono);font-size:.62rem;color:var(--dim);letter-spacing:.16em;text-transform:uppercase}
+.score-wrap{display:flex;align-items:baseline;justify-content:center;gap:.6rem}
+.score-denom{font-family:var(--mono);font-size:clamp(1.8rem,5vw,3.5rem);font-weight:700;color:var(--dim);opacity:.35;letter-spacing:-.03em}
+.scorebig{font-family:var(--mono);font-size:clamp(6rem,17vw,13rem);font-weight:700;
+  line-height:1;letter-spacing:-.04em;transition:color .6s,text-shadow .6s}
+.scorebig.red{color:var(--red);text-shadow:0 0 100px rgba(255,68,85,.35)}
+.scorebig.amber{color:var(--amber);text-shadow:0 0 100px rgba(245,166,35,.35)}
+.scorebig.green{color:var(--teal);text-shadow:0 0 100px rgba(0,212,170,.35)}
+.srows{width:100%;max-width:400px;display:flex;flex-direction:column;gap:.45rem}
+.srow{display:flex;justify-content:space-between;align-items:center;
+  padding:.55rem 1rem;background:var(--bg2);border:1px solid var(--border);
+  font-family:var(--mono);font-size:.74rem;opacity:0;transform:translateX(-10px);transition:all .32s ease}
+.srow.in{opacity:1;transform:translateX(0)}
+.ck{font-size:1rem;font-weight:700}
+.ck.y{color:var(--teal)}.ck.n{color:var(--red)}
+.verdict{font-size:clamp(.9rem,2.4vw,1.3rem);font-weight:700;opacity:0;transition:opacity .5s}
+.verdict.in{opacity:1}
+.verdict.red{color:var(--red)}.verdict.amber{color:var(--amber)}.verdict.green{color:var(--teal)}
+
+/* ═══ ACT 5 ═══ */
+#a5{justify-content:flex-start;overflow-y:auto;padding-top:1.8rem;padding-bottom:2rem;gap:1rem}
+.a5-eye{font-family:var(--mono);font-size:.65rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;flex-shrink:0}
+.a5-split{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);width:100%;max-width:920px;flex-shrink:0}
+.col-l,.col-r{padding:clamp(1.1rem,2vw,1.8rem) clamp(1rem,1.8vw,1.6rem);display:flex;flex-direction:column;gap:.7rem}
+.col-l{background:rgba(255,68,85,.05);border-right:1px solid var(--border)}
+.col-r{background:rgba(0,212,170,.05)}
+.col-tag{font-family:var(--mono);font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;opacity:.55;margin-bottom:.3rem}
+.col-l .col-tag{color:var(--red)}.col-r .col-tag{color:var(--teal)}
+.col-drug{font-family:var(--mono);font-size:clamp(1.1rem,2.8vw,1.7rem);font-weight:700;line-height:1.25}
+.col-l .col-drug{color:rgba(255,68,85,.6)}.col-r .col-drug{color:var(--teal)}
+.col-sc{font-family:var(--mono);font-size:clamp(2.6rem,6vw,4.2rem);font-weight:700;line-height:1;letter-spacing:-.03em}
+.col-l .col-sc{color:var(--red);opacity:.8}.col-r .col-sc{color:var(--teal)}
+.col-verdict{font-size:.88rem;font-weight:600;line-height:1.5}
+.col-l .col-verdict{color:rgba(255,68,85,.7)}.col-r .col-verdict{color:rgba(0,212,170,.8)}
+.col-note{font-size:.82rem;line-height:1.55;color:rgba(255,68,85,.6)}
+.steps{display:flex;flex-direction:column;gap:.5rem;margin-top:.3rem}
+.step{font-family:var(--mono);font-size:.75rem;line-height:1.4;opacity:0;transform:translateX(8px);
+  transition:all .38s ease;display:flex;align-items:flex-start;gap:.5rem}
+.step::before{content:'›';opacity:.4;flex-shrink:0;margin-top:.05em}
+.step.in{opacity:1;transform:translateX(0)}
+.step.in.bad{color:var(--red)}.step.in.ok{color:var(--teal)}.step.in.info{color:var(--amber)}
+.step-pend{color:var(--dim);font-size:.7rem;letter-spacing:.04em;animation:pendingblink .85s ease infinite}
+@keyframes pendingblink{0%,100%{opacity:.18}50%{opacity:.62}}
+.ai-header{margin-bottom:.5rem}
+.ai-name{font-family:var(--mono);font-size:clamp(1.2rem,2.8vw,1.8rem);font-weight:700;color:var(--teal);
+  text-shadow:0 0 28px rgba(0,212,170,.4);letter-spacing:.01em;line-height:1.1}
+.ai-sub{font-family:var(--mono);font-size:.58rem;color:rgba(0,212,170,.5);letter-spacing:.13em;text-transform:uppercase;margin-top:.35rem}
+.user-name{font-family:var(--mono);font-size:clamp(1.2rem,2.8vw,1.8rem);font-weight:700;color:rgba(220,232,245,.65);
+  letter-spacing:.01em;line-height:1.1}
+.user-sub{font-family:var(--mono);font-size:.58rem;color:var(--dim);letter-spacing:.13em;text-transform:uppercase;margin-top:.35rem}
+#trx{opacity:0;transition:opacity .5s}#trx.in{opacity:1}
+#tsc{opacity:0;transition:opacity .5s;font-family:var(--mono);font-weight:700;
+  font-size:clamp(2.6rem,6vw,4.2rem);line-height:1;color:var(--teal);letter-spacing:-.03em}
+#tsc.in{opacity:1}
+.a5-foot{text-align:center;width:100%;max-width:920px;margin-top:.6rem;flex-shrink:0}
+.finalline{font-size:clamp(.85rem,2vw,1.15rem);font-weight:600;color:var(--dim);line-height:1.5;margin-bottom:.7rem}
+.finalline em{color:var(--teal);font-style:normal}
+.col-sc-wrap{display:flex;align-items:baseline;gap:.4rem}
+.col-denom{font-family:var(--mono);font-size:.9em;font-weight:400;opacity:.35}
+.survivor-line{font-family:var(--mono);font-size:clamp(1.1rem,2.6vw,1.7rem);font-weight:700;
+  color:var(--teal);text-shadow:0 0 60px rgba(0,212,170,.35);margin-bottom:1rem;line-height:1.5;
+  opacity:0;transition:opacity .8s ease}
+.survivor-line.in{opacity:1}
+.a5-btns{display:flex;gap:.9rem;justify-content:center;flex-wrap:wrap}
+
+/* ── CLINICAL HIGHLIGHTS ── */
+.hl-danger{color:var(--red);font-weight:700;background:rgba(255,68,85,.1);
+  padding:0 3px;border-radius:2px}
+.hl-warning{color:var(--amber);font-weight:700;background:rgba(245,166,35,.1);
+  padding:0 3px;border-radius:2px}
+.hl-safe{color:var(--teal);font-weight:700;background:rgba(0,212,170,.1);
+  padding:0 3px;border-radius:2px}
+
+/* ── JEPA BARS ── */
+.jepa-bar-wrap{margin-top:.6rem;padding:.5rem .7rem;background:rgba(0,212,170,.04);
+  border:1px solid rgba(0,212,170,.14);border-radius:2px;display:none}
+.jepa-bar-label{font-family:var(--mono);font-size:.54rem;color:rgba(0,212,170,.5);
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:.35rem}
+.jepa-bar-track{height:4px;background:rgba(255,255,255,.07);border-radius:2px;position:relative}
+.jepa-bar-fill{height:4px;border-radius:2px;background:linear-gradient(90deg,rgba(0,212,170,.6),var(--teal));
+  transition:width .8s cubic-bezier(.16,1,.3,1);width:0}
+.jepa-score{font-family:var(--mono);font-size:.58rem;color:var(--teal);
+  margin-top:.3rem;letter-spacing:.04em}
+
+@media(max-width:660px){
+  .clue-grid{grid-template-columns:1fr}
+  .a5-split{grid-template-columns:1fr}
+  .col-l{border-right:none;border-bottom:1px solid var(--border)}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ ACT 0 — INTRO ═══ -->
+<div class="act" id="a0">
+  <div id="a0-n" class="bignumber">1,270,000</div>
+  <div id="a0-s" class="intro-sub">people die every year from the wrong antibiotic</div>
+  <div id="a0-q" class="intro-q">Can an AI learn to prescribe the right one?</div>
+  <div id="a0-b"><button class="btn lg" onclick="go(1)">See for yourself →</button></div>
+</div>
+
+<!-- ═══ ACT 1 — PATIENT ═══ -->
+<div class="act" id="a1">
+  <div class="ptbadge" id="ptbadge">PATIENT ????</div>
+  <svg class="ptfig" width="108" height="152" viewBox="0 0 108 152" fill="none">
+    <circle cx="54" cy="25" r="19" stroke="#00d4aa" stroke-width="1.3" fill="none" opacity=".6"/>
+    <path d="M33 69Q33 52 54 49Q75 52 75 69L78 133Q78 141 70 141L64 141L62 104Q58 99 54 99Q50 99 46 104L44 141L38 141Q30 141 30 133Z"
+      stroke="#00d4aa" stroke-width="1.3" fill="rgba(0,212,170,0.05)" opacity=".65"/>
+    <line x1="33" y1="73" x2="16" y2="102" stroke="#00d4aa" stroke-width="1.3" opacity=".38"/>
+    <line x1="75" y1="73" x2="92" y2="102" stroke="#00d4aa" stroke-width="1.3" opacity=".38"/>
+    <polyline id="hbeat" points="4,123 20,123 26,112 33,135 40,115 47,123 104,123"
+      stroke="#ff4455" stroke-width="1.2" fill="none" opacity=".5"
+      stroke-dasharray="215" stroke-dashoffset="215">
+      <animate attributeName="stroke-dashoffset" from="215" to="0" dur="1.3s" begin=".7s" fill="freeze"/>
+    </polyline>
+  </svg>
+  <div class="ptfacts">
+    <div class="ptprimary" id="pt-primary">–</div>
+    <div class="ptwarn" id="pt-warn">–</div>
+    <div class="ptnote" id="pt-note">–</div>
+  </div>
+  <div class="pips">
+    <span class="pip-lbl">Clues</span>
+    <div class="pip" id="p1a"></div><div class="pip" id="p1b"></div><div class="pip" id="p1c"></div>
+  </div>
+  <div class="ptrule">Reveal 3 clues. Then you decide.</div>
+  <button class="btn" onclick="go(2)">Begin →</button>
+</div>
+
+<!-- ═══ ACT 2 — CLUES ═══ -->
+<div class="act" id="a2">
+  <div class="pips" style="margin-bottom:1.8rem">
+    <span class="pip-lbl">Clues revealed</span>
+    <div class="pip off" id="p2a"></div><div class="pip off" id="p2b"></div><div class="pip off" id="p2c"></div>
+  </div>
+  <div class="clue-grid" id="clue-grid">
+    <!-- filled by JS -->
+  </div>
+  <div class="inv-footer">
+    <button class="btn" id="rxbtn" disabled onclick="go(3)">Choose a drug →</button>
+    <span class="inv-hint" id="inv-hint">Reveal all 3 clues first</span>
+  </div>
+</div>
+
+<!-- ═══ ACT 3 — PRESCRIBE ═══ -->
+<div class="act" id="a3">
+  <div class="rx-label">Based on the clues —<br><span>which drug do you prescribe?</span></div>
+  <div class="drug-opts" id="drug-opts"><!-- filled by JS --></div>
+  <div class="rx-row">
+    <button class="btn lg" id="rxcommit" disabled onclick="commit()">Prescribe</button>
+    <div class="spin" id="rxspin"></div>
+  </div>
+  <div class="rx-err" id="rxerr"></div>
+</div>
+
+<!-- ═══ ACT 4 — SCORE ═══ -->
+<div class="act" id="a4">
+  <div class="score-ctx">Prescription quality score — 0.0 = wrong drug kills patient · 1.0 = perfect treatment</div>
+  <div class="score-wrap">
+    <div class="scorebig" id="scorebig">0.00</div>
+    <div class="score-denom">/ 1.0</div>
+  </div>
+  <div class="srows">
+    <div class="srow" id="sr0"><span>Drug works on this bacteria</span><span class="ck" id="ck0">—</span></div>
+    <div class="srow" id="sr1"><span>Expert recommended</span><span class="ck" id="ck1">—</span></div>
+    <div class="srow" id="sr2"><span>Safest available option</span><span class="ck" id="ck2">—</span></div>
+    <div class="srow" id="sr3"><span>Right dose for this patient</span><span class="ck" id="ck3">—</span></div>
+  </div>
+  <div class="verdict" id="verd"></div>
+</div>
+
+<!-- ═══ ACT 5 — COMPARISON ═══ -->
+<div class="act" id="a5">
+  <div class="a5-eye">Same patient · Same environment · Different model</div>
+  <div class="a5-split">
+    <div class="col-l">
+      <div class="ai-header">
+        <div class="user-name">Your Prescription</div>
+        <div class="user-sub">Human · Unaided</div>
+      </div>
+      <div class="col-drug" id="a5-user-drug">–</div>
+      <div class="col-sc-wrap"><div class="col-sc" id="a5-user-sc">–</div><div class="col-denom">/ 1.0</div></div>
+      <div class="col-verdict" id="a5-user-verdict">–</div>
+    </div>
+    <div class="col-r">
+      <div class="ai-header">
+        <div class="ai-name">AMR-Steward</div>
+        <div class="ai-sub">GRPO-Trained · JEPA-Guided</div>
+      </div>
+      <div class="steps" id="a5-steps"><!-- filled by JS --></div>
+      <div id="trx" class="col-drug">–</div>
+      <div class="col-sc-wrap"><div id="tsc">–</div><div class="col-denom" id="tsc-denom" style="opacity:0;transition:opacity .5s">/ 1.0</div></div>
+    </div>
+  </div>
+  <div class="a5-foot">
+    <div class="finalline" id="a5-finalline">–</div>
+    <div class="survivor-line" id="a5-survivor"></div>
+    <div class="a5-btns">
+      <button class="btn" onclick="newCase()">Try another case →</button>
+      <a class="btn red" href="https://huggingface.co/saaheerpurav/amr-steward-model" target="_blank">How it was trained →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://saaheerpurav-amr-steward.hf.space';
+
+/* ── CASE DEFINITIONS ─────────────────────────────────────── */
+const CASES = [
+  {
+    id: 'cre',
+    badge: 'PATIENT 1047-F',
+    primary: '67. Female. ICU.',
+    warn:    'Drug-resistant bloodstream infection.',
+    note:    'Kidneys not working well.',
+    clues: [
+      { icon:'🧬', title:'What is this bacteria?',
+        sub:'Click to analyse the culture results',
+        result:'Klebsiella pneumoniae in the bloodstream — a drug-resistant superbug. Most antibiotics that doctors reach for first will not work against this strain.',
+        cls:'bad', tool:'interpret_resistance', arg:'meropenem' },
+      { icon:'📋', title:'What do the guidelines say?',
+        sub:'Click to check expert recommendations',
+        result:'For resistant K. pneumoniae bloodstream infections, medical guidelines recommend ceftazidime-avibactam as first-line treatment.',
+        cls:'info', tool:'check_guideline', arg:'bacteremia' },
+      { icon:'💊', title:'What can this patient handle?',
+        sub:'Click to assess patient-specific factors',
+        result:'Kidneys functioning at ~35% of normal. Any drug prescribed needs dose reduction — standard doses will accumulate to dangerous levels.',
+        cls:'info', tool:'assess_patient_factors', arg:'' },
+    ],
+    patient: {age:67,sex:"F",infection_site:"bacteremia",organism:"K. pneumoniae",
+      creatinine_clearance:35.0,allergies:[],phenotype:"resistant",curriculum_level:2,
+      antibiogram:{"meropenem":8.0,"ceftazidime-avibactam":1.0,"colistin":1.0,
+        "meropenem-vaborbactam":1.0,"ceftriaxone":32.0,"ciprofloxacin":16.0}},
+    drugs: [
+      {val:'meropenem',          name:'Meropenem',           cls:'Most commonly used for serious infections'},
+      {val:'ceftazidime-avibactam', name:'Ceftazidime-avibactam', cls:'Targeted at resistant strains'},
+      {val:'ceftriaxone',        name:'Ceftriaxone',         cls:'Common broad-spectrum antibiotic'},
+      {val:'colistin',           name:'Colistin',            cls:'Last-resort antibiotic'},
+      {val:'ciprofloxacin',      name:'Ciprofloxacin',       cls:'Fluoroquinolone antibiotic'},
+      {val:'meropenem-vaborbactam', name:'Meropenem-vaborbactam', cls:'Carbapenem with resistance-blocker'},
+    ],
+    doses: {"meropenem":"1g IV q8h","ceftazidime-avibactam":"2.5g IV q12h","colistin":"2.5 MU IV q12h",
+      "meropenem-vaborbactam":"2g/2g IV q8h","ceftriaxone":"2g IV q24h","ciprofloxacin":"400mg IV q12h"},
+    bad_drug:'MEROPENEM', bad_dose:'1g IV q8h',
+    bad_note:'This strain is fully resistant to meropenem. The drug has zero effect. Treatment fails.',
+    bad_sc:0.12,
+    trained_steps:[
+      {t:'Checked meropenem → RESISTANT ✗',   cls:'bad'},
+      {t:'Checked expert guidelines → ceftazidime-avibactam ✓', cls:'ok'},
+      {t:'Checked kidney function → reduce to q12h ✓', cls:'ok'},
+    ],
+    trained_drug:'CEFTAZIDIME-AVIBACTAM', trained_dose:'2.5g IV q12h', trained_sc:0.91,
+    final:`0.12 → <em>0.91</em>. Same patient.<br>The difference is whether she survives.`,
+  },
+  {
+    id: 'vre',
+    badge: 'PATIENT 2198-F',
+    primary: '72. Female. On dialysis.',
+    warn:    'Drug-resistant bloodstream infection.',
+    note:    'Kidneys non-functional.',
+    clues: [
+      { icon:'🧬', title:'What is this bacteria?',
+        sub:'Click to analyse the culture results',
+        result:'Enterococcus faecium — vancomycin-resistant (VRE). Vancomycin is the standard drug for this type of infection, but this strain defeats it entirely.',
+        cls:'bad', tool:'interpret_resistance', arg:'vancomycin' },
+      { icon:'📋', title:'What do the guidelines say?',
+        sub:'Click to check expert recommendations',
+        result:'For vancomycin-resistant Enterococcus bloodstream infections, experts recommend high-dose daptomycin as the first-line treatment.',
+        cls:'info', tool:'check_guideline', arg:'bacteremia' },
+      { icon:'💊', title:'What can this patient handle?',
+        sub:'Click to assess patient-specific factors',
+        result:'On hemodialysis — kidneys essentially non-functional. Drug must be given after each dialysis session. Many antibiotics are unsafe or eliminated by dialysis.',
+        cls:'info', tool:'assess_patient_factors', arg:'' },
+    ],
+    patient: {age:72,sex:"F",infection_site:"bacteremia",organism:"Enterococcus",
+      creatinine_clearance:8.0,allergies:[],phenotype:"resistant",curriculum_level:3,
+      antibiogram:{"vancomycin":32.0,"daptomycin":1.0,"linezolid":2.0,"ampicillin":64.0}},
+    drugs: [
+      {val:'vancomycin',  name:'Vancomycin',  cls:'Standard treatment for this type of bacteria'},
+      {val:'daptomycin',  name:'Daptomycin',  cls:'Works on resistant strains, kidney-safe'},
+      {val:'linezolid',   name:'Linezolid',   cls:'Oral/IV option for resistant bacteria'},
+      {val:'ampicillin',  name:'Ampicillin',  cls:'Common penicillin antibiotic'},
+    ],
+    doses: {"vancomycin":"1g IV q12h","daptomycin":"8mg/kg IV post-HD","linezolid":"600mg IV q12h","ampicillin":"2g IV q4h"},
+    bad_drug:'VANCOMYCIN', bad_dose:'1g IV q12h',
+    bad_note:'Vancomycin MIC=32 — fully resistant. This is the standard drug but it has zero effect on this strain.',
+    bad_sc:0.08,
+    trained_steps:[
+      {t:'Checked vancomycin → RESISTANT ✗', cls:'bad'},
+      {t:'Checked expert guidelines → daptomycin ✓', cls:'ok'},
+      {t:'Checked kidney function → post-HD dosing ✓', cls:'ok'},
+    ],
+    trained_drug:'DAPTOMYCIN', trained_dose:'8mg/kg IV post-HD', trained_sc:0.88,
+    final:`0.08 → <em>0.88</em>. Same patient.<br>The difference is whether she survives.`,
+  },
+];
+
+/* ── STATE ─────────────────────────────────────────────────── */
+let C = null;          // current case
+let cluesRevealed = 0;
+let invDone = [];
+let selectedDrug = null;
+let currentAct = -1;
+let userScore = 0;
+let userDrug = '';
+
+/* ── NAVIGATION ────────────────────────────────────────────── */
+function go(n) {
+  if (currentAct === n) return;
+  const prev = document.getElementById('a' + currentAct);
+  if (prev) { prev.classList.add('out'); prev.classList.remove('active'); }
+  setTimeout(() => {
+    if (prev) prev.classList.remove('out');
+    const next = document.getElementById('a' + n);
+    next.classList.add('active');
+    currentAct = n;
+    if (n === 5) revealA5();
+  }, 300);
+}
+
+/* ── HORIZONTAL SLIDE (Act 4 → Act 5) ─────────────────────── */
+function goSlide(n) {
+  if (currentAct === n) return;
+  const prevEl = document.getElementById('a' + currentAct);
+  const nextEl = document.getElementById('a' + n);
+  if (prevEl) {
+    prevEl.classList.add('slide-left');
+    prevEl.classList.remove('active');
+  }
+  nextEl.style.transition = 'none';
+  nextEl.classList.add('slide-from-right');
+  nextEl.getBoundingClientRect(); // force reflow
+  nextEl.style.transition = '';
+  setTimeout(() => {
+    if (prevEl) prevEl.classList.remove('slide-left');
+    nextEl.classList.remove('slide-from-right');
+    nextEl.classList.add('active');
+    currentAct = n;
+    if (n === 5) revealA5();
+  }, 350);
+}
+
+/* ── CASE SETUP ────────────────────────────────────────────── */
+function loadCase(c) {
+  C = c;
+  cluesRevealed = 0;
+  invDone = [];
+  selectedDrug = null;
+
+  // Act 1
+  document.getElementById('ptbadge').textContent = c.badge;
+  document.getElementById('pt-primary').textContent = c.primary;
+  document.getElementById('pt-warn').textContent = c.warn;
+  document.getElementById('pt-note').textContent = c.note;
+  ['p1a','p1b','p1c'].forEach(id => document.getElementById(id).classList.remove('off'));
+
+  // Act 2 — build clue cards
+  const grid = document.getElementById('clue-grid');
+  grid.innerHTML = '';
+  c.clues.forEach((cl, i) => {
+    const div = document.createElement('div');
+    div.className = 'clue-card';
+    div.id = 'cc' + i;
+    div.innerHTML = `
+      <div class="clue-icon">${cl.icon}</div>
+      <div class="clue-title">${cl.title}</div>
+      <div class="clue-sub">${cl.sub}</div>
+      <div class="clue-result" id="cr${i}"></div>
+      <div class="jepa-bar-wrap" id="jbar${i}">
+        <div class="jepa-bar-label">⚡ JEPA predicted info-gain</div>
+        <div class="jepa-bar-track"><div class="jepa-bar-fill" id="jfill${i}"></div></div>
+        <div class="jepa-score" id="jscore${i}"></div>
+      </div>
+      <div class="clue-tap">↑ tap to reveal</div>`;
+    div.onclick = () => revealClue(i);
+    grid.appendChild(div);
+  });
+
+  ['p2a','p2b','p2c'].forEach(id => document.getElementById(id).classList.add('off'));
+  document.getElementById('rxbtn').disabled = true;
+  document.getElementById('inv-hint').textContent = 'Reveal all 3 clues first';
+
+  // Act 3 — build drug options
+  const opts = document.getElementById('drug-opts');
+  opts.innerHTML = '';
+  c.drugs.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'drug-opt';
+    div.dataset.val = d.val;
+    div.innerHTML = `<div><div class="drug-name">${d.name}</div><div class="drug-class">${d.cls}</div></div><span style="opacity:.35;font-size:.9em">○</span>`;
+    div.onclick = () => selectDrug(d.val);
+    opts.appendChild(div);
+  });
+  document.getElementById('rxcommit').disabled = true;
+  document.getElementById('rxerr').style.display = 'none';
+
+  // Act 4 reset
+  ['sr0','sr1','sr2','sr3'].forEach(id => {
+    document.getElementById(id).classList.remove('in');
+    const i = id.replace('sr','');
+    document.getElementById('ck'+i).textContent = '—';
+    document.getElementById('ck'+i).className = 'ck';
+  });
+  document.getElementById('scorebig').textContent = '0.00';
+  document.getElementById('scorebig').className = 'scorebig';
+  const v = document.getElementById('verd');
+  v.className = 'verdict'; v.textContent = '';
+
+  // Act 5 reset
+  userScore = 0; userDrug = '';
+  document.getElementById('a5-user-drug').textContent = '–';
+  document.getElementById('a5-user-sc').textContent = '–';
+  document.getElementById('a5-user-verdict').textContent = '–';
+  const sv0 = document.getElementById('a5-survivor');
+  if (sv0) { sv0.textContent = ''; sv0.classList.remove('in'); }
+  const steps = document.getElementById('a5-steps');
+  steps.innerHTML = '';
+  c.trained_steps.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'step'; d.id = 'st'+i;
+    d.innerHTML = `<span class="step-txt" style="display:none">${s.t}</span><span class="step-pend">··· querying</span>`;
+    steps.appendChild(d);
+  });
+  document.getElementById('trx').className = 'col-drug';
+  document.getElementById('trx').innerHTML = `${c.trained_drug}<br><span style="font-size:.65em;opacity:.8">${c.trained_dose}</span>`;
+  document.getElementById('tsc').className = '';
+  document.getElementById('tsc').textContent = c.trained_sc.toFixed(2);
+  const den = document.getElementById('tsc-denom');
+  if (den) den.style.opacity = '0';
+  document.getElementById('a5-finalline').innerHTML = c.final;
+}
+
+function selectDrug(val) {
+  selectedDrug = val;
+  document.querySelectorAll('.drug-opt').forEach(el => {
+    const picked = el.dataset.val === val;
+    el.classList.toggle('selected', picked);
+    el.querySelector('span').textContent = picked ? '●' : '○';
+  });
+  document.getElementById('rxcommit').disabled = false;
+}
+
+/* ── CLINICAL KEYWORD HIGHLIGHTER ─────────────────────────── */
+function highlightClinical(text) {
+  // Danger — red: resistance, allergy, zero effect, MIC values
+  text = text.replace(
+    /\b(Resistant|RESISTANT|MIC\s*=\s*[\d.]+(?:\s*mg\/L)?|zero effect|allergy|ALLERGY FLAG|Vancomycin-resistant|carbapenem-resistant|drug-resistant|no breakpoint|does not work|non-functional|no MIC data)\b/gi,
+    '<span class="hl-danger">$1</span>'
+  );
+  // Warning — amber: renal, kidney, dosing
+  text = text.replace(
+    /\b(CrCl\s*[<>~]?\s*[\d.]+|CrCl|kidney|renal|Hemodialysis|dialysis|dose reduction|Kidneys|accumulate|dangerous|impairment)\b/gi,
+    '<span class="hl-warning">$1</span>'
+  );
+  // Safe — teal: guideline hits, susceptibility
+  text = text.replace(
+    /\b(Susceptible|SUSCEPTIBLE|first-line|first-line:|IDSA|recommended|ceftazidime-avibactam|daptomycin|vancomycin|ceftriaxone|cefazolin|cefiderocol|ertapenem)\b/gi,
+    '<span class="hl-safe">$1</span>'
+  );
+  return text;
+}
+
+/* ── CLUE REVEAL ───────────────────────────────────────────── */
+async function revealClue(i) {
+  const card = document.getElementById('cc' + i);
+  if (!card || card.classList.contains('done') || card.classList.contains('busy')) return;
+  card.classList.add('busy');
+
+  const cl = C.clues[i];
+  try {
+    await apiStep({action_type:"INVESTIGATE", tool_name:cl.tool, tool_arg:cl.arg});
+    invDone.push({tool:cl.tool, arg:cl.arg});
+    // Refresh JEPA bars after each tool call (state has changed)
+    fetchJepaRankings().catch(()=>{});
+  } catch(e) {
+    invDone.push({tool:cl.tool, arg:cl.arg});
+  }
+
+  const res = document.getElementById('cr' + i);
+  res.className = 'clue-result ' + cl.cls;
+  res.innerHTML = highlightClinical(cl.result);
+  res.style.display = 'block';
+  card.classList.remove('busy');
+  card.classList.add('done');
+
+  cluesRevealed++;
+  const pipIds = ['p2a','p2b','p2c'];
+  document.getElementById(pipIds[cluesRevealed - 1]).classList.remove('off');
+  ['p1a','p1b','p1c'][cluesRevealed - 1] && document.getElementById(['p1a','p1b','p1c'][cluesRevealed - 1]).classList.add('off');
+
+  if (cluesRevealed >= 3) {
+    document.getElementById('rxbtn').disabled = false;
+    document.getElementById('inv-hint').textContent = 'All clues revealed. Ready to prescribe.';
+  } else {
+    document.getElementById('inv-hint').textContent = `${3 - cluesRevealed} clue${3-cluesRevealed>1?'s':''} remaining`;
+  }
+}
+
+/* ── API ───────────────────────────────────────────────────── */
+async function apiReset() {
+  const r = await fetch(`${API}/reset`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({curriculum_level: C.patient.curriculum_level, patient: C.patient})
+  });
+  if (!r.ok) throw new Error('reset ' + r.status);
+  return r.json();
+}
+async function apiStep(action) {
+  const r = await fetch(`${API}/step`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action})
+  });
+  if (!r.ok) throw new Error('step ' + r.status);
+  return r.json();
+}
+
+/* ── JEPA RANKINGS ─────────────────────────────────────────── */
+// Maps each clue's tool signature to the AVAILABLE_TOOLS key in the world model
+const CLUE_TO_JEPA_KEY = {
+  'interpret_resistance:meropenem':           'interpret_resistance_meropenem',
+  'interpret_resistance:vancomycin':          'interpret_resistance_vancomycin',
+  'interpret_resistance:ceftriaxone':         'interpret_resistance_ceftriaxone',
+  'check_guideline:bacteremia':               'check_guideline_bacteremia',
+  'check_guideline:UTI':                      'check_guideline_UTI',
+  'check_guideline:pneumonia':                'check_guideline_pneumonia',
+  'assess_patient_factors:':                  'assess_patient_factors',
+  'assess_patient_factors:undefined':         'assess_patient_factors',
+};
+
+async function fetchJepaRankings() {
+  try {
+    const r = await fetch(`${API}/api/jepa-rankings`);
+    if (!r.ok) return;
+    const data = await r.json();
+    const rankings = data.rankings || [];
+    const scoreMap = {};
+    rankings.forEach(({tool, score}) => { scoreMap[tool] = score; });
+
+    // Find max score for relative bar scaling
+    const maxScore = Math.max(...Object.values(scoreMap), 0.001);
+
+    C.clues.forEach((cl, i) => {
+      const key = `${cl.tool}:${cl.arg}`;
+      const jepaKey = CLUE_TO_JEPA_KEY[key] || cl.tool;
+      const score = scoreMap[jepaKey];
+      if (score === undefined) return;
+
+      const wrap  = document.getElementById('jbar' + i);
+      const fill  = document.getElementById('jfill' + i);
+      const label = document.getElementById('jscore' + i);
+      if (!wrap || !fill || !label) return;
+
+      wrap.style.display = 'block';
+      // Animate after a microtask so display:block is painted first
+      requestAnimationFrame(() => {
+        fill.style.width = (score / maxScore * 100).toFixed(1) + '%';
+      });
+      label.textContent = `gain: ${score.toFixed(4)}`;
+    });
+  } catch(e) {
+    // JEPA bars are purely cosmetic — fail silently
+  }
+}
+
+/* ── COMMIT ────────────────────────────────────────────────── */
+async function commit() {
+  if (!selectedDrug) return;
+  const btn = document.getElementById('rxcommit');
+  const spin = document.getElementById('rxspin');
+  const err = document.getElementById('rxerr');
+  btn.disabled = true; spin.classList.add('on'); err.style.display = 'none';
+  try {
+    const resetResp = await apiReset();
+    // Cap replay at budget-1: when budget hits 0 the env marks done=True,
+    // making a subsequent COMMIT fail. Budget is 3 for curriculum levels 2-3.
+    const budget = resetResp?.observation?.budget_remaining ?? 3;
+    const replaySteps = invDone.slice(0, Math.max(0, budget - 1));
+    for (const inv of replaySteps) {
+      await apiStep({action_type:"INVESTIGATE", tool_name:inv.tool, tool_arg:inv.arg});
+    }
+    const resp = await apiStep({
+      action_type:"COMMIT",
+      prescription:{drug:selectedDrug, dose:C.doses[selectedDrug]||'standard dose',
+        duration:'14 days', justification:'user demo'}
+    });
+    revealScore(resp.reward ?? 0, resp.observation?.metadata?.reward_breakdown ?? {});
+  } catch(e) {
+    err.textContent = 'Could not reach the environment. Is the HF Space awake?';
+    err.style.display = 'block';
+    btn.disabled = false;
+  } finally {
+    spin.classList.remove('on');
+    if (!document.getElementById('rxerr').style.display || document.getElementById('rxerr').style.display === 'none') {
+      btn.disabled = false;
+    }
+  }
+}
+
+/* ── SCORE REVEAL ──────────────────────────────────────────── */
+function revealScore(score, bd) {
+  userScore = score;
+  userDrug = selectedDrug || '';
+  const el = document.getElementById('scorebig');
+  const cls = score < 0.5 ? 'red' : score < 0.85 ? 'amber' : 'green';
+  el.className = 'scorebig ' + cls;
+  animNum(el, 0, score, 1100);
+  [['R1_activity',0],['R2_guideline',1],['R3_stewardship',2],['R4_dose',3]].forEach(([k,i]) => {
+    setTimeout(() => {
+      document.getElementById('sr'+i).classList.add('in');
+      const ck = document.getElementById('ck'+i);
+      const pass = (bd[k] ?? 0) >= 0.9;
+      ck.textContent = pass ? '✓' : '✗';
+      ck.className = 'ck ' + (pass ? 'y' : 'n');
+    }, 750 + i * 210);
+  });
+  setTimeout(() => {
+    const v = document.getElementById('verd');
+    v.className = 'verdict in ' + cls;
+    v.textContent = score < 0.5 ? 'This patient would not survive.'
+                  : score < 0.85 ? 'Suboptimal treatment.' : 'Correct prescription.';
+  }, 1700);
+  setTimeout(() => goSlide(5), 3500);
+  go(4);
+}
+
+function animNum(el, from, to, dur) {
+  const t0 = Date.now();
+  const tick = () => {
+    const p = Math.min(1, (Date.now()-t0)/dur);
+    el.textContent = (to * (1-Math.pow(1-p,3))).toFixed(2);
+    if (p < 1) requestAnimationFrame(tick); else el.textContent = to.toFixed(2);
+  };
+  tick();
+}
+
+/* ── ACT 5 REVEAL ──────────────────────────────────────────── */
+function revealA5() {
+  const d = userDrug || '';
+  const drugDisplay = d ? d.toUpperCase() : C.bad_drug;
+  const doseDisplay = (d && C.doses[d]) ? C.doses[d] : C.bad_dose;
+  const sc = userScore > 0 ? userScore : C.bad_sc;
+  const cls = sc < 0.5 ? 'red' : sc < 0.85 ? 'amber' : 'green';
+  const verdictText = sc < 0.5 ? 'Treatment fails.'
+                    : sc < 0.85 ? 'Suboptimal treatment.' : 'Correct prescription.';
+  const drugEl = document.getElementById('a5-user-drug');
+  drugEl.innerHTML = `${drugDisplay}<br><span style="font-size:.65em;opacity:.5">${doseDisplay}</span>`;
+  drugEl.style.color = cls === 'green' ? 'var(--teal)' : cls === 'amber' ? 'var(--amber)' : 'rgba(255,68,85,.7)';
+  const scEl = document.getElementById('a5-user-sc');
+  scEl.textContent = sc.toFixed(2);
+  scEl.style.color = cls === 'green' ? 'var(--teal)' : cls === 'amber' ? 'var(--amber)' : 'var(--red)';
+  const vEl = document.getElementById('a5-user-verdict');
+  vEl.textContent = verdictText;
+  vEl.style.color = cls === 'green' ? 'rgba(0,212,170,.8)' : cls === 'amber' ? 'rgba(245,166,35,.85)' : 'rgba(255,68,85,.75)';
+  document.getElementById('a5-finalline').innerHTML =
+    `Your score: <em>${sc.toFixed(2)}</em>&nbsp;&nbsp;→&nbsp;&nbsp;Trained model: <em>${C.trained_sc.toFixed(2)}</em>`;
+
+  const survivorHTML = sc < 0.5
+    ? `JEPA guided the investigation. Correct drug identified.<br>This patient makes it home.`
+    : sc < 0.85
+    ? `The trained model prescribes correctly.<br>Optimal drug. Optimal dose. She survives.`
+    : `You matched the trained model.<br>Both prescriptions correct. She survives.`;
+  const sv = document.getElementById('a5-survivor');
+  if (sv) sv.innerHTML = survivorHTML;
+
+  const pendAt = [0, 750, 1500];
+  const resolAt = [560, 1310, 2060];
+  C.trained_steps.forEach((s, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('st'+i);
+      if (el) el.classList.add('in');
+    }, pendAt[i]);
+    setTimeout(() => {
+      const el = document.getElementById('st'+i);
+      if (el) {
+        const pend = el.querySelector('.step-pend');
+        const txt = el.querySelector('.step-txt');
+        if (pend) pend.style.display = 'none';
+        if (txt) txt.style.display = '';
+        el.classList.add(s.cls);
+      }
+    }, resolAt[i]);
+  });
+  setTimeout(() => document.getElementById('trx').classList.add('in'), 2750);
+  setTimeout(() => {
+    const tsc = document.getElementById('tsc');
+    tsc.classList.add('in');
+    animNum(tsc, 0, C.trained_sc, 900);
+    const den = document.getElementById('tsc-denom');
+    if (den) den.style.opacity = '.35';
+  }, 3150);
+  setTimeout(() => {
+    if (sv) sv.classList.add('in');
+  }, 3900);
+}
+
+/* ── NEW CASE ──────────────────────────────────────────────── */
+function newCase() {
+  const remaining = CASES.filter(c => c.id !== C.id);
+  const next = remaining[Math.floor(Math.random() * remaining.length)];
+  loadCase(next);
+  apiReset().catch(()=>{}).then(() => fetchJepaRankings().catch(()=>{}));
+  go(1);
+}
+
+/* ── INIT ──────────────────────────────────────────────────── */
+const startCase = CASES[Math.floor(Math.random() * CASES.length)];
+loadCase(startCase);
+apiReset().catch(()=>{}).then(() => fetchJepaRankings().catch(()=>{}));
+go(0);
+</script>
+</body>
+</html>

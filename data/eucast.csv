@@ -1,0 +1,72 @@
+organism,drug,S,R
+k. pneumoniae,meropenem,2,8
+k. pneumoniae,ertapenem,0.5,1
+k. pneumoniae,imipenem,2,8
+k. pneumoniae,piperacillin-tazobactam,8,16
+k. pneumoniae,ceftriaxone,1,2
+k. pneumoniae,cefepime,1,4
+k. pneumoniae,ceftazidime-avibactam,8,8
+k. pneumoniae,meropenem-vaborbactam,2,8
+k. pneumoniae,colistin,2,2
+k. pneumoniae,tigecycline,1,2
+k. pneumoniae,ampicillin,8,8
+k. pneumoniae,ampicillin-sulbactam,8,16
+k. pneumoniae,trimethoprim-sulfamethoxazole,2,4
+k. pneumoniae,nitrofurantoin,32,64
+k. pneumoniae,cefazolin,4,4
+k. pneumoniae,ceftolozane-tazobactam,1,4
+k. pneumoniae,cefiderocol,2,2
+k. pneumoniae,fosfomycin,32,32
+k. pneumoniae,ciprofloxacin,0.25,0.5
+k. pneumoniae,aztreonam,1,4
+e. coli,meropenem,2,8
+e. coli,ertapenem,0.5,1
+e. coli,imipenem,2,8
+e. coli,piperacillin-tazobactam,8,16
+e. coli,ceftriaxone,1,2
+e. coli,cefepime,1,4
+e. coli,ceftazidime-avibactam,8,8
+e. coli,meropenem-vaborbactam,2,8
+e. coli,colistin,2,2
+e. coli,tigecycline,1,2
+e. coli,ampicillin,8,8
+e. coli,ampicillin-sulbactam,8,16
+e. coli,trimethoprim-sulfamethoxazole,2,4
+e. coli,nitrofurantoin,32,64
+e. coli,cefazolin,4,4
+e. coli,ceftolozane-tazobactam,1,4
+e. coli,cefiderocol,2,2
+e. coli,fosfomycin,32,32
+e. coli,ciprofloxacin,0.25,0.5
+e. coli,aztreonam,1,4
+p. aeruginosa,piperacillin-tazobactam,16,16
+p. aeruginosa,cefepime,8,8
+p. aeruginosa,meropenem,2,8
+p. aeruginosa,imipenem,2,8
+p. aeruginosa,ceftazidime,8,8
+p. aeruginosa,ceftazidime-avibactam,8,8
+p. aeruginosa,ceftolozane-tazobactam,4,4
+p. aeruginosa,colistin,2,2
+p. aeruginosa,cefiderocol,2,2
+p. aeruginosa,ciprofloxacin,0.5,1
+p. aeruginosa,tobramycin,2,4
+p. aeruginosa,aztreonam,8,8
+s. aureus,vancomycin,2,2
+s. aureus,daptomycin,1,1
+s. aureus,linezolid,4,4
+s. aureus,oxacillin,2,2
+s. aureus,nafcillin,2,2
+s. aureus,cefazolin,4,4
+s. aureus,trimethoprim-sulfamethoxazole,2,4
+s. aureus,ceftaroline,1,1
+s. aureus,clindamycin,0.25,0.5
+s. aureus,rifampicin,0.06,0.5
+s. aureus,fusidic-acid,1,1
+s. aureus,teicoplanin,2,2
+enterococcus,ampicillin,4,8
+enterococcus,vancomycin,4,4
+enterococcus,linezolid,4,4
+enterococcus,daptomycin,4,4
+enterococcus,teicoplanin,4,4
+enterococcus,tigecycline,0.25,0.5
+enterococcus,fosfomycin,32,32

@@ -1,0 +1,656 @@
+{
+  "config": {
+    "seed": 42,
+    "pass_threshold": 0.85,
+    "subopt_threshold": 0.4,
+    "n_cases": 10
+  },
+  "pass_rates": {
+    "broad_empiric": {
+      "pass": 0,
+      "subopt": 2,
+      "fail": 8,
+      "pass_rate": 0.0
+    },
+    "random": {
+      "pass": 2,
+      "subopt": 3,
+      "fail": 5,
+      "pass_rate": 0.2
+    },
+    "eucast_narrowest": {
+      "pass": 7,
+      "subopt": 3,
+      "fail": 0,
+      "pass_rate": 0.7
+    },
+    "oracle": {
+      "pass": 9,
+      "subopt": 1,
+      "fail": 0,
+      "pass_rate": 0.9
+    }
+  },
+  "cases": {
+    "A1": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.0,
+        "total": 0.0,
+        "breakdown": {
+          "R0_allergy": 0.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 0.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "ampicillin",
+        "dose": "2g IV q4h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.0,
+        "total": 0.0,
+        "breakdown": {
+          "R0_allergy": 0.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 0.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "vancomycin",
+        "dose": "15-20mg/kg IV q8-12h",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.7828,
+        "total": 0.7045,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.5,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "vancomycin",
+        "dose": "15-20mg/kg IV q8-12h",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.7828,
+        "total": 0.7045,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.5,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A2": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q12h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "meropenem",
+        "dose": "1g IV q12h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "ceftazidime-avibactam",
+        "dose": "1.25g IV q8h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "ceftazidime-avibactam",
+        "dose": "1.25g IV q8h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A3": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.6059,
+        "total": 0.5453,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.1,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.6059,
+        "total": 0.5453,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.1,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "cefazolin",
+        "dose": "2g IV q8h",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.7647,
+        "total": 0.6882,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "ceftriaxone",
+        "dose": "2g IV q24h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 0.5,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A4": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "vancomycin",
+        "dose": "15-20mg/kg IV q8-12h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "vancomycin",
+        "dose": "15-20mg/kg IV q8-12h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "vancomycin",
+        "dose": "15-20mg/kg IV q8-12h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A5": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "500mg IV q12h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "ceftazidime-avibactam",
+        "dose": "0.94g IV q12h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "ceftazidime-avibactam",
+        "dose": "0.94g IV q12h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "ceftazidime-avibactam",
+        "dose": "0.94g IV q12h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A6": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "500mg IV q24h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "vancomycin",
+        "dose": "15-20mg/kg IV q48-72h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "daptomycin",
+        "dose": "8mg/kg IV post-HD",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "daptomycin",
+        "dose": "8mg/kg IV post-HD",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A7": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "colistin",
+        "dose": "specialist dosing by colistin base activity",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.7611,
+        "total": 0.685,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.5,
+          "R3_stewardship": 0.4,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "cefiderocol",
+        "dose": "2g IV q8h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "cefiderocol",
+        "dose": "2g IV q8h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A8": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "vancomycin",
+        "dose": "15-20mg/kg IV q8-12h",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.6389,
+        "total": 0.575,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.5,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "oxacillin",
+        "dose": "standard dose",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.8056,
+        "total": 0.725,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.5,
+          "R3_stewardship": 1.0,
+          "R4_dose": 0.5,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "cefazolin",
+        "dose": "2g IV q8h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A9": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "SUBOPT",
+        "quality_ratio": 0.8235,
+        "total": 0.7412,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 0.5,
+          "R3_stewardship": 0.5,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "ceftriaxone",
+        "dose": "standard dose",
+        "verdict": "FAIL",
+        "quality_ratio": 0.0588,
+        "total": 0.0529,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 0.5,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "ertapenem",
+        "dose": "standard dose",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 0.5,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "ertapenem",
+        "dose": "1g IV q24h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 0.5,
+          "R5_efficiency": 0.0
+        }
+      }
+    },
+    "A10": {
+      "broad_empiric": {
+        "drug": "meropenem",
+        "dose": "1g IV q8h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "random": {
+        "drug": "cefepime",
+        "dose": "2g IV q8h",
+        "verdict": "FAIL",
+        "quality_ratio": 0.1111,
+        "total": 0.1,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 0.0,
+          "R2_guideline": 0.0,
+          "R3_stewardship": 0.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "eucast_narrowest": {
+        "drug": "ceftazidime-avibactam",
+        "dose": "2.5g IV q8h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      },
+      "oracle": {
+        "drug": "ceftazidime-avibactam",
+        "dose": "2.5g IV q8h",
+        "verdict": "PASS",
+        "quality_ratio": 1.0,
+        "total": 0.9,
+        "breakdown": {
+          "R0_allergy": 1.0,
+          "R1_activity": 1.0,
+          "R2_guideline": 1.0,
+          "R3_stewardship": 1.0,
+          "R4_dose": 1.0,
+          "R5_efficiency": 0.0
+        }
+      }
+    }
+  }
+}

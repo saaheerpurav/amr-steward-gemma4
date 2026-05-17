@@ -1,0 +1,50 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/          # only if used as a venv dir; note our env/ package is tracked separately
+*.venv
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── ML artefacts ──────────────────────────────────────────────────────────────
+# jepa_weights.pt is intentionally tracked (pre-trained JEPA world model)
+checkpoints/
+*.safetensors
+*.bin
+outputs/
+runs/
+wandb/
+
+# ── Sensitive / internal planning documents ────────────────────────────────────
+IMPLEMENTATION_PLAN.md
+PROJECT_MASTER.md
+
+# ── OS cruft ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editor ────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+CODEBASE_CONTEXT.md
+
+# ── Cache ─────────────────────────────────────────────────────────────────────
+.cache/
