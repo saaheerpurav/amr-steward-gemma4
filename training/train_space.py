@@ -52,11 +52,13 @@ class _VLLMLoader:
 
 _vllm_loader = _VLLMLoader()
 
+_STUB_ROOTS = {"vllm", "vllm_ascend", "mergekit"}
+
 class _VLLMFinder:
     @staticmethod
     def find_spec(name, path, target=None):
-        if name == "vllm" or name.startswith("vllm.") or \
-           name == "vllm_ascend" or name.startswith("vllm_ascend."):
+        root = name.split(".")[0]
+        if root in _STUB_ROOTS:
             if name in sys.modules:
                 return sys.modules[name].__spec__
             return _imm.ModuleSpec(name, _vllm_loader, origin="stub")
