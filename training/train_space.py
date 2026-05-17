@@ -52,7 +52,17 @@ class _VLLMLoader:
 
 _vllm_loader = _VLLMLoader()
 
-_STUB_ROOTS = {"vllm", "vllm_ascend", "mergekit"}
+# Stub all TRL optional deps that aren't installed; covers vllm, mergekit, llm_blender, etc.
+_STUB_ROOTS = {
+    "vllm", "vllm_ascend",
+    "mergekit",            # TRL callbacks/mergekit_utils
+    "llm_blender",         # TRL judges.py PairRM
+    "liger_kernel",        # TRL chunked GRPO loss
+    "unsloth",             # TRL unsloth trainer
+    "deepspeed",           # deep distributed (not used single-GPU)
+    "ray",                 # TRL ray remote
+    "diffusers",           # TRL diffusion policy
+}
 
 class _VLLMFinder:
     @staticmethod
