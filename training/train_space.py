@@ -27,37 +27,40 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
 os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
-# Stub ALL vllm.* imports so TRL's vllm_client.py doesn't crash (we use use_vllm=False)
-# Uses a meta path finder so we don't need to enumerate every submodule.
+# Stub ALL vllm.* and vllm_ascend.* imports so TRL's vllm_client doesn't crash
+# Uses modern find_spec/create_module/exec_module API (required for Python 3.10+)
 import types as _types, importlib.machinery as _imm
 
 class _AutoStub:
-    """Returns itself for any attribute, call, or instantiation."""
+    """No-op stand-in for any vllm class — callable, iterable, attribute-safe."""
     def __init__(self, *a, **kw): pass
     def __call__(self, *a, **kw): return _AutoStub()
     def __getattr__(self, n): return _AutoStub()
     def __iter__(self): return iter([])
-    def __repr__(self): return "<vllm-stub>"
 
 class _VLLMStubModule(_types.ModuleType):
-    """Module that returns _AutoStub for any attribute (covers 'from vllm.x import Y')."""
-    def __getattr__(self, name):
-        return _AutoStub
+    def __getattr__(self, name): return _AutoStub
+
+class _VLLMLoader:
+    def create_module(self, spec):
+        m = _VLLMStubModule(spec.name)
+        m.__spec__ = spec
+        m.__package__ = spec.name.split(".")[0]
+        m.__path__ = []
+        return m
+    def exec_module(self, module): pass
+
+_vllm_loader = _VLLMLoader()
 
 class _VLLMFinder:
-    @classmethod
-    def find_module(cls, name, path=None):
-        return cls if name == "vllm" or name.startswith("vllm.") else None
-    @classmethod
-    def load_module(cls, name):
-        if name in sys.modules:
-            return sys.modules[name]
-        m = _VLLMStubModule(name)
-        m.__spec__ = _imm.ModuleSpec(name, loader=None, origin="vllm-stub")
-        m.__package__ = "vllm"
-        m.__path__ = []
-        sys.modules[name] = m
-        return m
+    @staticmethod
+    def find_spec(name, path, target=None):
+        if name == "vllm" or name.startswith("vllm.") or \
+           name == "vllm_ascend" or name.startswith("vllm_ascend."):
+            if name in sys.modules:
+                return sys.modules[name].__spec__
+            return _imm.ModuleSpec(name, _vllm_loader, origin="stub")
+        return None
 
 sys.meta_path.insert(0, _VLLMFinder)
 
