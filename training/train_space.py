@@ -383,7 +383,7 @@ def train_stage(model, tokenizer, level, num_samples, stage_label, reward_fns):
         logging_steps=1,
         save_steps=50,
         save_total_limit=2,
-        report_to="tensorboard",
+        report_to="none",
         max_completion_length=MAX_COMPLETION,
         num_generations=NUM_GENERATIONS,
         temperature=0.7,
