@@ -23,6 +23,9 @@ for _k in ("LOCAL_RANK", "RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT"):
     os.environ.pop(_k, None)
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+# Disable torch.compile / Dynamo to avoid any compilation overhead during training
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
+os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
 _accel_cfg = Path.home() / ".cache" / "huggingface" / "accelerate" / "default_config.yaml"
 _accel_cfg.parent.mkdir(parents=True, exist_ok=True)
@@ -257,12 +260,18 @@ def load_model():
     _dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float16
     log(f"Using dtype: {_dtype}")
 
-    model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype=_dtype, device_map="auto")
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME, torch_dtype=_dtype, device_map="auto", attn_implementation="eager"
+    )
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
+    # Gemma 4 wraps Linear in Gemma4ClippableLinear; target the inner .linear attribute
     lora_cfg = LoraConfig(
         r=16, lora_alpha=32, lora_dropout=0.0, bias="none", task_type="CAUSAL_LM",
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+        target_modules=[
+            "q_proj.linear", "k_proj.linear", "v_proj.linear", "o_proj.linear",
+            "gate_proj.linear", "up_proj.linear", "down_proj.linear",
+        ],
     )
     model = get_peft_model(model, lora_cfg)
     model.enable_input_require_grads()

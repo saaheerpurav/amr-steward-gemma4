@@ -17,7 +17,13 @@ import uuid
 from pathlib import Path
 from typing import Any, Optional
 
-from openenv.core.env_server import Environment
+from typing import Generic, TypeVar as _TV
+
+_A = _TV("_A"); _O = _TV("_O"); _S = _TV("_S")
+
+class Environment(Generic[_A, _O, _S]):
+    """Minimal RL environment base class."""
+    def __init__(self): pass
 
 from .models import AMRAction, AMRObservation, AMRState, PatientCase
 from .world_model import AMRWorldModel, AVAILABLE_TOOLS, WEIGHTS_PATH, enrich_observation

@@ -1,8 +1,5 @@
 """
 env/models.py — Data models for AMR-Steward.
-
-AMRAction, AMRObservation, AMRState extend openenv-core base classes.
-PatientCase is a plain dataclass — internal state, not part of the wire protocol.
 """
 
 from __future__ import annotations
@@ -10,8 +7,30 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from openenv.core.env_server import Action, Observation, State
-from pydantic import Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+# ---------------------------------------------------------------------------
+# Minimal base classes (previously from openenv-core)
+# ---------------------------------------------------------------------------
+
+class Action(BaseModel):
+    """Base action."""
+    pass
+
+
+class Observation(BaseModel):
+    """Base observation — carries done/reward/metadata."""
+    done: bool = False
+    reward: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class State(BaseModel):
+    """Base episode state."""
+    model_config = ConfigDict(extra="allow")
+    episode_id: str = ""
+    step_count: int = 0
 
 
 
