@@ -31,12 +31,24 @@ os.environ["TORCH_COMPILE_DISABLE"] = "1"
 # Uses modern find_spec/create_module/exec_module API (required for Python 3.10+)
 import types as _types, importlib.machinery as _imm
 
-class _AutoStub:
-    """No-op stand-in for any vllm class — callable, iterable, attribute-safe."""
+class _AutoStubMeta(type):
+    """Metaclass so the _AutoStub CLASS itself is iterable/subscriptable."""
+    def __iter__(cls): return iter([])
+    def __len__(cls): return 0
+    def __getitem__(cls, item): return cls
+    def __contains__(cls, item): return False
+    def __bool__(cls): return True
+
+class _AutoStub(metaclass=_AutoStubMeta):
+    """No-op stand-in for any optional dep class — callable, iterable, attribute-safe."""
     def __init__(self, *a, **kw): pass
     def __call__(self, *a, **kw): return _AutoStub()
     def __getattr__(self, n): return _AutoStub()
     def __iter__(self): return iter([])
+    def __len__(self): return 0
+    def __bool__(self): return True
+    def __str__(self): return ""
+    def __repr__(self): return "AutoStub()"
 
 class _VLLMStubModule(_types.ModuleType):
     def __getattr__(self, name): return _AutoStub
