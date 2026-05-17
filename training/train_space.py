@@ -273,20 +273,10 @@ def _build_reward_fns():
             return 0.0
 
     def fmt_fn(prompts, completions, **kw):
-        import re as _re
         rewards = []
-        for c in completions:
-            # Prefill "COMMIT: {\"drug\": \"" is in the prompt, not the completion —
-            # reconstruct the full text so COMMIT: is visible to the reward function.
-            text = COMPLETION_PREFIX + _completion_to_text(c)
-            lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
-            has_commit = any(_re.search(r"COMMIT\s*:", l, _re.IGNORECASE) for l in lines)
-            has_action = any(_re.search(r"(INVESTIGATE|COMMIT)\s*:", l, _re.IGNORECASE) for l in lines)
-            if not has_commit:
-                rewards.append(0.02 if has_action else 0.0)
-            else:
-                r6 = float(R6_format(text))
-                rewards.append(0.05 + r6 * 0.10)
+        for comp in completions:
+            text = COMPLETION_PREFIX + _completion_to_text(comp)
+            rewards.append(float(R6_format(text)))
         log(f"  fmt_rewards={[round(r,4) for r in rewards]} sample={_completion_to_text(completions[0])[:80]!r}")
         return rewards
 
