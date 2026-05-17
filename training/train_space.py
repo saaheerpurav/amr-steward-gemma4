@@ -630,6 +630,20 @@ def train_stage(model, tokenizer, level, num_samples, stage_label, reward_fns):
         processing_class=tokenizer,
     )
 
+    # TRL creates its own GenerationConfig; patch it directly to break subword loops.
+    # Setting on model.generation_config doesn't work — TRL overrides it.
+    try:
+        trainer.generation_config.repetition_penalty = 1.3
+        trainer.generation_config.do_sample = True
+        log("  gen_config patched: repetition_penalty=1.3, do_sample=True")
+    except Exception as _e:
+        log(f"  gen_config patch failed ({_e}); trying model.generation_config")
+        try:
+            model.generation_config.repetition_penalty = 1.3
+            model.generation_config.do_sample = True
+        except Exception:
+            pass
+
     _orig_log = trainer.log
     def _patched_log(logs, *args, **kwargs):
         numeric = {k: round(v, 5) for k, v in logs.items() if isinstance(v, (int, float))}
