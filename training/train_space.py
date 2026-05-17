@@ -27,30 +27,39 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
 os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
-# Stub vllm so TRL's vllm_client.py doesn't fail on import (we use use_vllm=False)
-# Must set __spec__ properly so importlib.util.find_spec("vllm") returns non-None
+# Stub ALL vllm.* imports so TRL's vllm_client.py doesn't crash (we use use_vllm=False)
+# Uses a meta path finder so we don't need to enumerate every submodule.
 import types as _types, importlib.machinery as _imm
 
-def _vllm_stub(name):
-    m = _types.ModuleType(name)
-    m.__spec__ = _imm.ModuleSpec(name, loader=None, origin="stub")
-    m.__package__ = name.split(".")[0]
-    m.__path__ = []
-    return m
+class _AutoStub:
+    """Returns itself for any attribute, call, or instantiation."""
+    def __init__(self, *a, **kw): pass
+    def __call__(self, *a, **kw): return _AutoStub()
+    def __getattr__(self, n): return _AutoStub()
+    def __iter__(self): return iter([])
+    def __repr__(self): return "<vllm-stub>"
 
-for _vmod in [
-    "vllm", "vllm.distributed", "vllm.distributed.device_communicators",
-    "vllm.distributed.device_communicators.pynccl",
-    "vllm.lora", "vllm.lora.request", "vllm.sampling_params",
-    "vllm.inputs", "vllm.outputs",
-]:
-    if _vmod not in sys.modules:
-        sys.modules[_vmod] = _vllm_stub(_vmod)
+class _VLLMStubModule(_types.ModuleType):
+    """Module that returns _AutoStub for any attribute (covers 'from vllm.x import Y')."""
+    def __getattr__(self, name):
+        return _AutoStub
 
-# Stub classes that TRL's vllm_client.py references
-sys.modules["vllm.distributed.device_communicators.pynccl"].PyNcclCommunicator = type("PyNcclCommunicator", (), {"__init__": lambda s, *a, **k: None})
-sys.modules["vllm.sampling_params"].SamplingParams = type("SamplingParams", (), {"__init__": lambda s, *a, **k: None})
-sys.modules["vllm.lora.request"].LoRARequest = type("LoRARequest", (), {"__init__": lambda s, *a, **k: None})
+class _VLLMFinder:
+    @classmethod
+    def find_module(cls, name, path=None):
+        return cls if name == "vllm" or name.startswith("vllm.") else None
+    @classmethod
+    def load_module(cls, name):
+        if name in sys.modules:
+            return sys.modules[name]
+        m = _VLLMStubModule(name)
+        m.__spec__ = _imm.ModuleSpec(name, loader=None, origin="vllm-stub")
+        m.__package__ = "vllm"
+        m.__path__ = []
+        sys.modules[name] = m
+        return m
+
+sys.meta_path.insert(0, _VLLMFinder)
 
 _accel_cfg = Path.home() / ".cache" / "huggingface" / "accelerate" / "default_config.yaml"
 _accel_cfg.parent.mkdir(parents=True, exist_ok=True)
