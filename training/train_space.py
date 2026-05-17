@@ -27,6 +27,22 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
 os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
+# Stub vllm so TRL's vllm_client.py doesn't fail on import (we use use_vllm=False)
+import types as _types
+for _vmod in [
+    "vllm", "vllm.distributed", "vllm.distributed.device_communicators",
+    "vllm.distributed.device_communicators.pynccl",
+    "vllm.lora", "vllm.lora.request", "vllm.sampling_params",
+]:
+    if _vmod not in sys.modules:
+        _m = _types.ModuleType(_vmod)
+        _m.__path__ = []
+        sys.modules[_vmod] = _m
+# Stub classes TRL's vllm_client references
+sys.modules["vllm.distributed.device_communicators.pynccl"].PyNcclCommunicator = type("PyNcclCommunicator", (), {"__init__": lambda s, *a, **k: None})
+sys.modules["vllm.sampling_params"].SamplingParams = type("SamplingParams", (), {"__init__": lambda s, *a, **k: None})
+sys.modules["vllm.lora.request"].LoRARequest = type("LoRARequest", (), {"__init__": lambda s, *a, **k: None})
+
 _accel_cfg = Path.home() / ".cache" / "huggingface" / "accelerate" / "default_config.yaml"
 _accel_cfg.parent.mkdir(parents=True, exist_ok=True)
 _accel_cfg.write_text("compute_environment: LOCAL_MACHINE\ndistributed_type: 'NO'\nnum_processes: 1\n")
