@@ -28,17 +28,26 @@ os.environ["TORCHDYNAMO_DISABLE"] = "1"
 os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
 # Stub vllm so TRL's vllm_client.py doesn't fail on import (we use use_vllm=False)
-import types as _types
+# Must set __spec__ properly so importlib.util.find_spec("vllm") returns non-None
+import types as _types, importlib.util as _ilu
+
+def _vllm_stub(name):
+    m = _types.ModuleType(name)
+    m.__spec__ = _ilu.ModuleSpec(name, loader=None, origin="stub")
+    m.__package__ = name.split(".")[0]
+    m.__path__ = []
+    return m
+
 for _vmod in [
     "vllm", "vllm.distributed", "vllm.distributed.device_communicators",
     "vllm.distributed.device_communicators.pynccl",
     "vllm.lora", "vllm.lora.request", "vllm.sampling_params",
+    "vllm.inputs", "vllm.outputs",
 ]:
     if _vmod not in sys.modules:
-        _m = _types.ModuleType(_vmod)
-        _m.__path__ = []
-        sys.modules[_vmod] = _m
-# Stub classes TRL's vllm_client references
+        sys.modules[_vmod] = _vllm_stub(_vmod)
+
+# Stub classes that TRL's vllm_client.py references
 sys.modules["vllm.distributed.device_communicators.pynccl"].PyNcclCommunicator = type("PyNcclCommunicator", (), {"__init__": lambda s, *a, **k: None})
 sys.modules["vllm.sampling_params"].SamplingParams = type("SamplingParams", (), {"__init__": lambda s, *a, **k: None})
 sys.modules["vllm.lora.request"].LoRARequest = type("LoRARequest", (), {"__init__": lambda s, *a, **k: None})
