@@ -118,9 +118,9 @@ def setup_hf():
 
 
 def clone_repo():
-    log("Cloning saaheerpurav/amr-steward ...")
+    log("Cloning saaheerpurav/amr-steward-gemma4 ...")
     subprocess.run(
-        ["git", "clone", "https://github.com/saaheerpurav/amr-steward.git", "/app/repo"],
+        ["git", "clone", "https://github.com/saaheerpurav/amr-steward-gemma4.git", "/app/repo"],
         check=True, capture_output=True
     )
     sys.path.insert(0, "/app/repo")
