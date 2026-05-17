@@ -32,12 +32,13 @@ os.environ["TORCH_COMPILE_DISABLE"] = "1"
 import types as _types, importlib.machinery as _imm
 
 class _AutoStubMeta(type):
-    """Metaclass so the _AutoStub CLASS itself is iterable/subscriptable."""
+    """Metaclass so the _AutoStub CLASS itself is iterable/subscriptable/attribute-safe."""
     def __iter__(cls): return iter([])
     def __len__(cls): return 0
-    def __getitem__(cls, item): return cls
+    def __getitem__(cls, item): return cls()
     def __contains__(cls, item): return False
     def __bool__(cls): return True
+    def __getattr__(cls, name): return cls()  # handles SomeStubClass.attr
 
 class _AutoStub(metaclass=_AutoStubMeta):
     """No-op stand-in for any optional dep class — callable, iterable, attribute-safe."""
