@@ -109,10 +109,9 @@ SFT_SAMPLES_PER_LEVEL = int(os.getenv("SFT_SAMPLES_PER_LEVEL", "25"))
 
 SYSTEM_PROMPT = "You are an antimicrobial stewardship AI. Select the best antibiotic for the patient."
 
-# Prefill forces the model to output a drug name as the first tokens.
-# NO "INVESTIGATE" or "COMMIT" keywords appear anywhere in the prompts —
-# those words were causing the model to loop on the "INVEST" subword token.
-COMPLETION_PREFIX = 'COMMIT: {"drug": "'
+# Empty prefix: model outputs the drug name freely in plain text.
+# JSON COMMIT: prefix caused subword repetition loops (cece..., mermer...).
+COMPLETION_PREFIX = ""
 
 _status: dict[str, Any] = {"phase": "starting", "stage": None, "reward": None, "error": None, "last_trl_metrics": None}
 _log_lines: list[str] = []
@@ -272,11 +271,24 @@ def _build_reward_fns():
         except Exception:
             return 0.0
 
-    def fmt_fn(prompts, completions, **kw):
+    def fmt_fn(prompts, completions, patient_json=None, **kw):
+        import re as _re2
+        pj_list = list(patient_json) if patient_json else [None] * len(completions)
         rewards = []
-        for comp in completions:
-            text = COMPLETION_PREFIX + _completion_to_text(comp)
-            rewards.append(float(R6_format(text)))
+        for comp, payload in zip(completions, pj_list):
+            comp_text = _completion_to_text(comp).strip().lower()
+            r = 0.0
+            if payload:
+                try:
+                    p = PatientCase(**json.loads(payload))
+                    for drug in p.antibiogram:
+                        pat = drug.lower().replace("-", r"[-\s]?")
+                        if _re2.search(pat, comp_text):
+                            r = 1.0
+                            break
+                except Exception:
+                    pass
+            rewards.append(r)
         log(f"  fmt_rewards={[round(r,4) for r in rewards]} sample={_completion_to_text(completions[0])[:80]!r}")
         return rewards
 
@@ -312,24 +324,24 @@ def build_dataset(level: int, num_samples: int, tokenizer=None):
     from env import AMREnvironment
 
     def _render(obs):
-        # Build plain drug list from patient antibiogram — no special keywords
         try:
-            import json as _json
             patient = env.current_patient
+            drug_opts = " | ".join(patient.antibiogram.keys())
             drug_lines = "\n".join(
                 f"  {d}: MIC {mic}" for d, mic in patient.antibiogram.items()
             )
-            renal = f"CrCl {patient.creatinine_clearance} mL/min" if getattr(patient, "creatinine_clearance", None) else ""
+            renal = f"CrCl {patient.creatinine_clearance:.0f} mL/min" if getattr(patient, "creatinine_clearance", None) else "normal"
             allergies = ", ".join(patient.allergies) if getattr(patient, "allergies", None) else "none"
             user_content = (
-                f"{obs.patient_text}\n\n"
-                f"Available drugs:\n{drug_lines}\n\n"
-                f"Renal function: {renal or 'normal'}\n"
+                f"{obs.patient_text}\n"
+                f"Antibiogram:\n{drug_lines}\n"
+                f"Renal function: {renal}\n"
                 f"Allergies: {allergies}\n\n"
-                f"Which drug is best for this patient?"
+                f"Choose from: {drug_opts}\n\n"
+                f"Which antibiotic is most appropriate? Reply with ONLY the drug name."
             )
         except Exception:
-            user_content = obs.patient_text
+            user_content = obs.patient_text + "\nWhich antibiotic is most appropriate? Reply with ONLY the drug name."
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user",   "content": user_content},
@@ -337,8 +349,8 @@ def build_dataset(level: int, num_samples: int, tokenizer=None):
         if tokenizer is not None:
             return tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True,
-            ) + COMPLETION_PREFIX
-        return f"SYSTEM:\n{SYSTEM_PROMPT}\n\nUSER:\n{user_content}\n\nASSISTANT:{COMPLETION_PREFIX}"
+            )
+        return f"SYSTEM:\n{SYSTEM_PROMPT}\n\nUSER:\n{user_content}\n\nASSISTANT:\n"
 
     env = AMREnvironment()
     rows = []
