@@ -529,6 +529,12 @@ if __name__ == "__main__":
 
     train_main()
 
-    log("Waiting 60s before auto-pause so status page is readable ...")
-    time.sleep(60)
-    _auto_pause_space()
+    if _status["phase"] == "done":
+        log("Waiting 60s before auto-pause so status page is readable ...")
+        time.sleep(60)
+        _auto_pause_space()
+    else:
+        # Error path: keep space alive so monitor can read the error before pausing
+        log("Training failed — keeping space alive 300s for error inspection ...")
+        time.sleep(300)
+        _auto_pause_space()
