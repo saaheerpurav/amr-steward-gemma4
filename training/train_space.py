@@ -336,6 +336,10 @@ def load_model():
         ],
     )
     model = get_peft_model(model, lora_cfg)
+    # PEFT/TRL expect warnings_issued on the base model; Gemma4 doesn't have it
+    for _m in [model, getattr(model, 'base_model', None), getattr(getattr(model, 'base_model', None), 'model', None)]:
+        if _m is not None and not hasattr(_m, 'warnings_issued'):
+            _m.warnings_issued = {}
     model.enable_input_require_grads()
     model.gradient_checkpointing_enable()
     model.config.use_cache = False
