@@ -12,7 +12,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 RUN pip install --no-cache-dir \
-    "torch==2.5.1" --index-url https://download.pytorch.org/whl/cu121
+    "torch==2.6.0" --index-url https://download.pytorch.org/whl/cu121
 
 RUN pip install --no-cache-dir \
     "trl>=0.19" "accelerate>=0.34" "peft>=0.11" "datasets>=2.19" \
