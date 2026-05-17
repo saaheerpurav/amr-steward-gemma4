@@ -29,11 +29,11 @@ os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
 # Stub vllm so TRL's vllm_client.py doesn't fail on import (we use use_vllm=False)
 # Must set __spec__ properly so importlib.util.find_spec("vllm") returns non-None
-import types as _types, importlib.util as _ilu
+import types as _types, importlib.machinery as _imm
 
 def _vllm_stub(name):
     m = _types.ModuleType(name)
-    m.__spec__ = _ilu.ModuleSpec(name, loader=None, origin="stub")
+    m.__spec__ = _imm.ModuleSpec(name, loader=None, origin="stub")
     m.__package__ = name.split(".")[0]
     m.__path__ = []
     return m
