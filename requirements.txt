@@ -16,6 +16,8 @@ datasets>=2.19.0
 transformers>=4.52.0
 accelerate>=0.34.0
 peft>=0.11.0
+matplotlib>=3.8.0
+huggingface-hub>=0.23.0
 
 # ── WhatsApp bot ───────────────────────────────────────────────────────────────
 twilio>=8.0.0

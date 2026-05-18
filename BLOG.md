@@ -6,7 +6,7 @@
 
 ## TL;DR
 
-We built an RL environment that teaches Gemma 4 to prescribe the correct antibiotic for drug-resistant bacterial infections using GRPO. The reward is entirely mathematical — seven pure-function components verified against EUCAST clinical breakpoints and IDSA guidelines. No LLM-as-judge. The trained Gemma 4 model reaches **0.84–0.90** across three curriculum stages, passes **3/3 published clinical cases** and **10/10 adversarial cases**, and scores **10/10 where broad-empiric prescribing scores 0/10** — the failure mode that kills patients in the real world.
+We built an RL environment that teaches Gemma 4 to prescribe the correct antibiotic for drug-resistant bacterial infections using GRPO. The reward is entirely mathematical — seven pure-function components verified against EUCAST clinical breakpoints and IDSA guidelines. No LLM-as-judge. Training across three curriculum stages shows mean reward improving from 0.555 → 0.631 → 0.740 as difficulty scales, with peaks reaching 0.90. The deterministic oracle scores **9/10** on adversarial cases where broad-empiric prescribing scores **0/10** — the failure mode that kills patients in the real world.
 
 ---
 
@@ -103,11 +103,11 @@ Three stages on Gemma 4 (`gemma-4-e2b-it`) + LoRA r=16 (A10G GPU via HF Spaces):
 
 | Stage | Cases | Organisms | Renal | Budget | Result |
 |-------|-------|-----------|-------|--------|--------|
-| 1 | 128 | Susceptible only | Normal | 5 tools | 0.54 → **0.90** (peak 0.923, mean 0.84) |
-| 2 | 64 | + ESBL, MRSA, VRE | Mild–moderate | 4 tools | 0.86 → **0.84** (terminal mean 0.79) |
-| 3 | 32 | + CRE, XDR, VISA | Severe + allergies | 3 tools | 0.81 → **0.88** (peak 0.988, mean 0.71) |
+| 1 | 128 | Susceptible only | Normal | 5 tools | 0.475 → **peak 0.842** (mean 0.555) |
+| 2 | 64 | + ESBL, MRSA, VRE | Mild–moderate | 4 tools | 0.600 → **peak 0.800** (mean 0.631) |
+| 3 | 32 | + CRE, XDR, VISA | Severe + allergies | 3 tools | 0.800 → **peak 0.900** (mean 0.740) |
 
-The reward holds **above 0.70 across all three stages** as complexity scales from susceptible E. coli to MDR Pseudomonas with CrCl 25 and penicillin allergy.
+Mean reward increases across curriculum stages (0.555 → 0.631 → 0.740) as the model generalises from susceptible organisms to MDR pathogens with renal failure and allergies.
 
 ![Reward curves across all three curriculum stages](reward_curves.png)
 
@@ -123,14 +123,14 @@ The reward holds **above 0.70 across all three stages** as complexity scales fro
 | MSSA bacteremia | Maraolo AE et al. *Open Forum Infect Dis.* 2018 | Cefazolin 2g IV q8h | **1.000** |
 | VRE on hemodialysis | Britt NS et al. *Clin Infect Dis.* 2015 | Daptomycin 8mg/kg post-HD | **0.939** |
 
-### Adversarial stress test — 10/10 pass
+### Adversarial stress test — baseline comparison
 
 | Policy | Pass rate (quality_ratio ≥ 0.85) |
 |--------|----------------------------------|
 | Broad-empiric (always meropenem) | **0/10** |
 | Random (seed=42) | **2/10** |
 | EUCAST-only (antibiogram, no IDSA) | **7/10** |
-| **Gemma 4 trained with GRPO** | **10/10** |
+| **Deterministic oracle (optimal)** | **9/10** |
 
 ---
 

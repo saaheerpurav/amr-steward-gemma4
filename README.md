@@ -55,9 +55,9 @@ GRPO training on `google/gemma-4-e2b-it` + LoRA (r=16) across three curriculum s
 
 | Stage | Cases | Peak Reward | Mean Reward |
 |-------|-------|-------------|-------------|
-| 1 — Susceptible organisms | 128 | **0.923** | 0.840 |
-| 2 — Resistant / MDR | 64 | **0.840** | 0.790 |
-| 3 — MDR + Renal failure + Allergies | 32 | **0.988** | 0.707 |
+| 1 — Susceptible organisms | 128 | **0.842** | 0.555 |
+| 2 — Resistant / MDR | 64 | **0.800** | 0.631 |
+| 3 — MDR + Renal failure + Allergies | 32 | **0.900** | 0.740 |
 
 **Baseline comparison on adversarial stress tests (10 hard cases):**
 
@@ -66,7 +66,7 @@ GRPO training on `google/gemma-4-e2b-it` + LoRA (r=16) across three curriculum s
 | Broad-empiric (always meropenem) | 0 / 10 |
 | Random antibiogram selection | 2 / 10 |
 | EUCAST-only (no guideline lookup) | 7 / 10 |
-| **Gemma 4 trained with GRPO** | **10 / 10** |
+| **Deterministic oracle (optimal)** | **9 / 10** |
 
 ![Reward curves across curriculum stages](reward_curves.png)
 
@@ -184,9 +184,9 @@ Three real cases from peer-reviewed literature, scored independently by the RLVR
 
 10 hand-crafted cases engineered to break specific failure modes. Pass threshold: quality_ratio ≥ 0.85.
 
-| ID | Scenario | Best Drug | Broad-Empiric | Gemma 4 (trained) |
-|----|----------|-----------|---------------|-------------------|
-| A1 | VSE bacteremia + penicillin allergy | `vancomycin` | FAIL (0.00) | **PASS (0.88)** |
+| ID | Scenario | Best Drug | Broad-Empiric | Oracle (optimal) |
+|----|----------|-----------|---------------|-----------------|
+| A1 | VSE bacteremia + penicillin allergy | `vancomycin` | FAIL (0.00) | SUBOPT (0.78) |
 | A2 | CRE K. pneumoniae bacteremia | `ceftazidime-avibactam` | FAIL (0.11) | **PASS (0.94)** |
 | A3 | Susceptible E. coli UTI — stewardship trap | `ceftriaxone` | SUBOPT (0.61) | **PASS (0.96)** |
 | A4 | MRSA pneumonia | `vancomycin` | FAIL (0.11) | **PASS (0.92)** |
@@ -197,7 +197,7 @@ Three real cases from peer-reviewed literature, scored independently by the RLVR
 | A9 | ESBL E. coli bacteremia — carbapenem stewardship | `ertapenem` | SUBOPT (0.82) | **PASS (0.95)** |
 | A10 | MDR CRE intra-abdominal infection | `ceftazidime-avibactam` | FAIL (0.11) | **PASS (0.96)** |
 
-> **Broad-empiric: 0/10. Gemma 4 trained with GRPO: 10/10.**
+> **Broad-empiric: 0/10. Deterministic oracle: 9/10.**
 
 > Reproduce: `python eval_adversarial.py --seed 42` — runs in <10 seconds on CPU.
 
